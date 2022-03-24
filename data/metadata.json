@@ -1,0 +1,14 @@
+{
+    "twitter-keyword": [
+        "IMDb",
+        "Batman",
+        "Spiderman"
+    ],
+    "web-keyword": [
+        "Batman"
+    ],
+    "web": [
+        "https://www.imdb.com/news/top",
+        "https://editorial.rottentomatoes.com/news/"
+    ]
+}
