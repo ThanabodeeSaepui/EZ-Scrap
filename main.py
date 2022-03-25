@@ -5,4 +5,4 @@ if __name__ == '__main__':
     # webcrawler.scrap()
 
     tw_crawler = TwitterCrawler()
-    tw_crawler.search_tweets("Batman", 500)
+    tw_crawler.search_tweets("Batman", 100)

@@ -151,11 +151,7 @@ class TwitterCrawler():
         consumer_secret = os.getenv('CONSUMER_SECRET')
         access_token = os.getenv('ACCESS_TOKEN')
         access_token_secret = os.getenv('ACCESS_TOKEN_SECRET')
-        print(consumer_key)
-        print(consumer_secret)
-        print(access_token)
-        print(access_token_secret)
-
+        
         try:
             auth = tw.OAuthHandler(consumer_key, consumer_secret)
             auth.set_access_token(access_token, access_token_secret)
@@ -167,9 +163,8 @@ class TwitterCrawler():
 
     def search_tweets(self, search_words, count=50):
         api = self.connect()
-        search_words += ' -filter:retweets'
         tweets = api.search_tweets(
-            q=search_words, 
+            q=f"{search_words} -filter:retweets", 
             lang="en",
             count=count)
 
@@ -178,19 +173,22 @@ class TwitterCrawler():
             tweets_set.add(tweet)
         tweets = list(tweets_set)
 
-        users_locs = [[tweet.user.screen_name,
+        users_locs = [[
+            search_words,
+            tweet.user.screen_name,
             tweet.user.location if tweet.user.location != '' else 'unknown',
             tweet.created_at.replace(tzinfo=None),
-            tweet.text,
+            remove_url(tweet.text),
             sentiment(TextBlob(stem(cleanText(tweet.text)))),
             f"https://twitter.com/twitter/statuses/{tweet.id}"] for tweet in tweets]
                     
         tweet_text = pd.DataFrame(data=users_locs, 
-            columns=['user','location','post date','tweet','sentiment','tweet link'])
-        tweet_text.to_excel("./data/tweets.xlsx", engine="openpyxl", index=False)
+            columns=['keyword','user','location','post date','tweet','sentiment','tweet link'])
+        self.save_to_excel(tweet_text)
 
     def save_to_excel(self, tweets):
-        pass
+        tweets.to_excel("./data/tweets.xlsx", engine="openpyxl", index=False)
+
 
 def cleanText(text):
     text = text.lower()
@@ -228,3 +226,35 @@ def sentiment(cleaned_text):
         return 'negative'
     else:
         return 'neutral'
+
+def remove_url(txt):
+    """Replace URLs found in a text string with nothing 
+    (i.e. it will remove the URL from the string).
+
+    Parameters
+    ----------
+    txt : string
+        A text string that you want to parse and remove urls.
+
+    Returns
+    -------
+    The same txt string with url's removed.
+    """
+
+    return " ".join(re.sub("([^0-9A-Za-z \t])|(\w+:\/\/\S+)", "", txt).split())
+
+def remove_url_th(txt):
+    """Replace URLs found in a text string with nothing 
+    (i.e. it will remove the URL from the string).
+
+    Parameters
+    ----------
+    txt : string
+        A text string that you want to parse and remove urls.
+
+    Returns
+    -------
+    The same txt string with url's removed.
+    """
+
+    return " ".join(re.sub("([^\u0E00-\u0E7Fa-zA-Z' ]|^'|'$|''|(\w+:\/\/\S+))", "", txt).split())
