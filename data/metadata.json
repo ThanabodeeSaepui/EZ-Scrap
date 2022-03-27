@@ -4,11 +4,10 @@
         "Batman",
         "Spiderman"
     ],
-    "web-keyword": [
-        "Batman"
-    ],
+    "web-keyword": [],
     "web": [
         "https://www.imdb.com/news/top",
-        "https://editorial.rottentomatoes.com/news/"
+        "https://www.metacritic.com",
+        "https://www.rottentomatoes.com"
     ]
 }

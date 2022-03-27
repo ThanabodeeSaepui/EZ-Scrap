@@ -14,13 +14,16 @@ from nltk.stem import PorterStemmer
 from textblob import TextBlob
 
 class WebCrawler():
-    link = ['https://www.imdb.com/news/top', 'https://www.metacritic.com', 'https://www.rottentomatoes.com']
+    link = ['https://www.imdb.com/news/top', 'https://www.empireonline.com/movies/news/', 'https://editorial.rottentomatoes.com/news/']
+    allow_domain = ['https://www.imdb.com', 'https://www.empireonline.com', 'rottentomatoes.com']
     headers = {'User-Agent' : 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:88) Gecko/20100101 Firefox/88.0'}
+    clean = re.compile('<.*?>')
 
     def __init__(self):
-        self.main_link = 'https://www.imdb.com/news/top'
+        self.start_link = WebCrawler.link
+
         self.found_link = set()
-        self.allow_domain = 'www.imdb.com'
+        self.allow_domain = WebCrawler.allow_domain
         self.scrap_data = {}
         self.metadata = {}
 
@@ -42,40 +45,53 @@ class WebCrawler():
             self.metadata = data
 
     def scrap(self):
-        html = requests.get(self.main_link, headers=WebCrawler.headers)
-        bs = BeautifulSoup(html.text, 'html.parser')
-
-        # remove unuse tag
-        unuse_tag = [bs.head, bs.footer, bs.script, bs.noscript, bs.iframe]
-        for tag in unuse_tag:
-            if tag != None:
-                tag.decompose()
-
-        self.scrap_data[self.main_link] = str(bs)
-
-        # find next link
-        LINK = set()
-        for a in bs.find_all('a'):              # find all tag a
-            link = a.attrs['href']
-            if link == None:                    # no href found
+        for domain in self.start_link:
+            response = requests.get(domain, headers=WebCrawler.headers)
+            if response.status_code >= 400:
                 continue
-            if link.find('https') == -1:        # is relative link
-                link = self.main_link + link
-            if link.find(self.allow_domain) != -1:  # in allow domain
-                LINK.add(link)
+            bs = BeautifulSoup(response.text, 'html.parser')
 
-        # use thread to go next link
-        n = len(LINK)
-        with ThreadPoolExecutor(max_workers=n) as executor:
-            with requests.Session() as session:
-                executor.map(self.fetch, [self.main_link]*n ,[session]*n, [*LINK])
-                executor.shutdown(wait=True)
+            # remove unuse tag
+            unuse_tag = [bs.head, bs.footer, bs.script, bs.noscript, bs.iframe]
+            for tag in unuse_tag:
+                if tag != None:
+                    tag.decompose()
+            self.scrap_data[domain] = self.clean_html(str(bs))
+
+            # find next link
+            LINK = set()
+            for a in bs.find_all('a'):              # find all tag a
+                try:
+                    link = a.attrs['href']
+                except KeyError:
+                    continue
+                if link == None:                    # no href found
+                    continue
+                if link.find('https') == -1:        # is relative link
+                    link = domain + link
+                if link in self.found_link:         # if already found link
+                    continue
+                for DOMAIN in self.allow_domain:
+                    if link.find(DOMAIN) != -1:  # in allow domain
+                        LINK.add(link)
+                        self.found_link.add(link)
+                        break
+
+            # use thread to go next link
+            n = len(LINK)
+            with ThreadPoolExecutor(max_workers=n) as executor:
+                with requests.Session() as session:
+                    executor.map(self.fetch, [domain]*n ,[session]*n, [*LINK])
+                    executor.shutdown(wait=True)
 
         self.save_to_data()
 
 
     def fetch(self, domain, session, url):
         with session.get(url, headers=WebCrawler.headers) as response:
+            if response.status_code >= 400:
+                return
+            self.found_link.add(domain)
             print(f'current url : {url}', end='\r')
             bs = BeautifulSoup(response.text, 'html.parser')
 
@@ -84,19 +100,27 @@ class WebCrawler():
             for tag in unuse_tag:
                 if tag != None:
                     tag.decompose()
-
-            self.scrap_data[self.main_link] = str(bs)
+            self.scrap_data[url] = self.clean_html(str(bs))
 
             # find next link
             LINK = set()
             for a in bs.find_all('a'):
                 link = a.attrs['href']
+                try:
+                    link = a.attrs['href']
+                except KeyError:
+                    continue
                 if link == None:
                     continue
                 if link.find('https') == -1:            # is relative link
                     link = domain + link
-                if link.find(self.allow_domain) != -1:  # in allow domain
-                    LINK.add(link)
+                if link in self.found_link:         # if already found link
+                    continue
+                for DOMAIN in self.allow_domain:
+                    if link.find(DOMAIN) != -1:  # in allow domain
+                        LINK.add(link)
+                        self.found_link.add(link)
+                        break
 
             # use thread to go next link
             n = len(LINK)
@@ -107,6 +131,8 @@ class WebCrawler():
 
     def fetch_sub(self, session, url):
         with session.get(url, headers=WebCrawler.headers) as response:
+            if response.status_code >= 400:
+                return
             print(f'current url(sub) : {url}', end='\r')
             bs = BeautifulSoup(response.text, 'html.parser')
             # remove unuse tag
@@ -114,13 +140,19 @@ class WebCrawler():
             for tag in unuse_tag:
                 if tag != None:
                     tag.decompose()
-
-            self.scrap_data[self.main_link] = str(bs)
+            self.scrap_data[url] = self.clean_html(str(bs))
 
     def save_to_data(self):
         with open("./data/web-data.json", 'w') as outfile:
             JSON = json.dumps(self.scrap_data, indent=4) 
             outfile.write(JSON)
+
+    def clean_html(self, html):
+        clean_text = re.sub(WebCrawler.clean, '', html)     # remove all html tag
+        for char in ['\n', '\t', '\r']:                     # remove escape character
+            clean_text = clean_text.replace(char, '')
+        clean_text = re.sub(' +', ' ', clean_text)
+        return clean_text
 
 class TwitterCrawler():
 
@@ -179,11 +211,13 @@ class TwitterCrawler():
             tweet.user.location if tweet.user.location != '' else 'unknown',
             tweet.created_at.replace(tzinfo=None),
             remove_url(tweet.text),
+            tweet.favorite_count,
+            tweet.retweet_count,
             sentiment(TextBlob(stem(cleanText(tweet.text)))),
             f"https://twitter.com/twitter/statuses/{tweet.id}"] for tweet in tweets]
                     
         tweet_text = pd.DataFrame(data=users_locs, 
-            columns=['keyword','user','location','post date','tweet','sentiment','tweet link'])
+            columns=['keyword','user','location','post date','tweet', 'favorite count', 'retweet count','sentiment','tweet link'])
         self.save_to_excel(tweet_text)
 
     def save_to_excel(self, tweets):
