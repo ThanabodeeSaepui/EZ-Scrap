@@ -1,6 +1,7 @@
 import os
 import re
 import json
+from datetime import datetime, timedelta
 from concurrent.futures import ThreadPoolExecutor
 
 import requests
@@ -27,17 +28,18 @@ class WebCrawler():
         self.scrap_data = {}
         self.metadata = {}
 
-        try:
-            os.mkdir('./data')
-        except FileExistsError:
-            pass
+        self.setup_dir()
         self.load_metadata()
 
+    def setup_dir(self):
+        if not os.path.exists("./data/web-data"):
+            os.mkdir("./data/web-data")
+
     def load_metadata(self):
-        try:
+        if os.path.exists('./data/metadata.json'):  # load metadata if file was found
             metadata_json = open('./data/metadata.json')
             self.metadata = json.load(metadata_json)
-        except FileNotFoundError:   # make file if no file
+        else:  # make file if no file
             data = {'twitter-keyword' : [], 'web-keyword' : [], 'web' : []}
             with open('./data/metadata.json', 'w') as outfile:
                 JSON = json.dumps(data, indent=4)
@@ -159,22 +161,29 @@ class TwitterCrawler():
     def __init__(self):
         self.metadata = {}
 
-        try:
-            os.mkdir('./data')
-        except FileExistsError:
-            pass
+        self.setup_dir()    # setup data hierarchy
         self.load_metadata()
 
+    def setup_dir(self):
+        if not os.path.exists(f"./data/tweets/"): 
+            os.mkdir(f"./data/tweets/")
+        
     def load_metadata(self):
-        try:
+        if os.path.exists('./data/metadata.json'):  # load metadata if file was found
             metadata_json = open('./data/metadata.json')
             self.metadata = json.load(metadata_json)
-        except FileNotFoundError:   # make file if no file
+        else:  # make file if no file
             data = {'twitter-keyword' : [], 'web-keyword' : [], 'web' : []}
             with open('./data/metadata.json', 'w') as outfile:
                 JSON = json.dumps(data, indent=4)
                 outfile.write(JSON)
             self.metadata = data
+
+    def save_metadata(self):
+        with open('./data/metadata.json', 'w') as outfile:
+            JSON = json.dumps(self.metadata, indent=4)
+            outfile.write(JSON)
+
 
     def connect(self):
         # set API key in .env
@@ -193,35 +202,48 @@ class TwitterCrawler():
             print("Error")
             exit(1)
 
-    def search_tweets(self, search_words, count=50):
+    def search_tweets(self, keyword):
+        if not os.path.exists(f"./data/tweets/{keyword}"):  # create dir for new keyword if not exist
+            os.makedirs(f"./data/tweets/{keyword}")
         api = self.connect()
-        tweets = api.search_tweets(
-            q=f"{search_words} -filter:retweets", 
-            lang="en",
-            count=count)
+        for i in range(7):  # search 7 day
+            until_day = datetime.strftime(datetime.now() - timedelta(i-1), '%Y-%m-%d')
+            day = datetime.strftime(datetime.now() - timedelta(i), '%Y-%m-%d')
+            if day in self.metadata['twitter-keyword'][keyword]['date']:
+                continue
+            print(f"searching : {day}")
+            tweets = tw.Cursor(api.search_tweets, 
+                        q=f"{keyword} -filter:retweets",
+                        lang="en",
+                        until=until_day).items(900)
 
-        tweets_set = set()
-        for tweet in tweets:
-            tweets_set.add(tweet)
-        tweets = list(tweets_set)
+            # use set to remove duplicate tweet
+            tweets_set = set()
+            for tweet in tweets:
+                tweets_set.add(tweet)
+            tweets = list(tweets_set)
 
-        users_locs = [[
-            search_words,
-            tweet.user.screen_name,
-            tweet.user.location if tweet.user.location != '' else 'unknown',
-            tweet.created_at.replace(tzinfo=None),
-            remove_url(tweet.text),
-            tweet.favorite_count,
-            tweet.retweet_count,
-            sentiment(TextBlob(stem(cleanText(tweet.text)))),
-            f"https://twitter.com/twitter/statuses/{tweet.id}"] for tweet in tweets]
-                    
-        tweet_text = pd.DataFrame(data=users_locs, 
-            columns=['keyword','user','location','post date','tweet', 'favorite count', 'retweet count','sentiment','tweet link'])
-        self.save_to_excel(tweet_text)
+            # convert to dataframe
+            users_locs = [[
+                keyword,
+                tweet.user.screen_name,
+                tweet.user.location if tweet.user.location != '' else 'unknown',
+                tweet.created_at.replace(tzinfo=None),
+                remove_url(tweet.text),
+                tweet.favorite_count,
+                tweet.retweet_count,
+                sentiment(TextBlob(stem(cleanText(tweet.text)))),
+                f"https://twitter.com/twitter/statuses/{tweet.id}"] for tweet in tweets]
 
-    def save_to_excel(self, tweets):
-        tweets.to_excel("./data/tweets.xlsx", engine="openpyxl", index=False)
+            tweet_text = pd.DataFrame(data=users_locs, 
+                columns=['keyword','user','location','post date','tweet', 'favorite count', 'retweet count','sentiment','tweet link'])
+            tweet_text = tweet_text.sort_values('post date', ascending=True).reset_index(drop=True)     # sort by datetime
+
+            # save to excel
+            tweet_text.to_excel(f"./data/tweets/{keyword}/{day}.xlsx", engine="openpyxl", index=False)
+            self.metadata['twitter-keyword'][keyword]['date'].append(day)
+            self.save_metadata()
+            print(f"save to file : {day}.xlsx")
 
 
 def cleanText(text):
@@ -292,3 +314,6 @@ def remove_url_th(txt):
     """
 
     return " ".join(re.sub("([^\u0E00-\u0E7Fa-zA-Z' ]|^'|'$|''|(\w+:\/\/\S+))", "", txt).split())
+
+if not os.path.exists('./data'):
+    os.mkdir('./data')

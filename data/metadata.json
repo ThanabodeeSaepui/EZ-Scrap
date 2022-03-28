@@ -1,9 +1,15 @@
 {
-    "twitter-keyword": [
-        "IMDb",
-        "Batman",
-        "Spiderman"
-    ],
+    "twitter-keyword": {
+        "#Batman": {
+            "date": [
+                "2022-03-27",
+                "2022-03-26",
+                "2022-03-28",
+                "2022-03-25",
+                "2022-03-24"
+            ]
+        }
+    },
     "web-keyword": [],
     "web": [
         "https://www.imdb.com/news/top",
