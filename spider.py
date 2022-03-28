@@ -209,6 +209,8 @@ class TwitterCrawler():
         for i in range(7):  # search 7 day
             until_day = datetime.strftime(datetime.now() - timedelta(i-1), '%Y-%m-%d')
             day = datetime.strftime(datetime.now() - timedelta(i), '%Y-%m-%d')
+            if keyword not  in self.metadata['twitter-keyword'].keys():
+                self.metadata['twitter-keyword'][keyword] = {'date' : []}
             if day in self.metadata['twitter-keyword'][keyword]['date']:
                 continue
             print(f"searching : {day}")
