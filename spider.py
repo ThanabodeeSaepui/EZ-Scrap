@@ -1,6 +1,7 @@
 import os
 import re
 import json
+from urllib.parse import urlparse
 from datetime import datetime, timedelta
 from concurrent.futures import ThreadPoolExecutor
 
@@ -15,8 +16,30 @@ from nltk.stem import PorterStemmer
 from textblob import TextBlob
 
 class WebCrawler():
-    link = ['https://www.imdb.com/news/top', 'https://www.empireonline.com/movies/news/', 'https://editorial.rottentomatoes.com/news/']
-    allow_domain = ['https://www.imdb.com', 'https://www.empireonline.com', 'rottentomatoes.com']
+    link = [
+        'https://www.imdb.com/news/movie',
+        'https://www.empireonline.com/movies/news/',
+        'https://editorial.rottentomatoes.com/news/',
+        'https://collider.com',
+        'https://screenrant.com/movie-news/']
+    non_scrap_domain = {
+        't.co',
+        'twitter.com',
+        'pinterest.com',
+        'www.reddit.com',
+        'youtu.be',
+        'www.youtube.com',
+        'instagram.com',
+        'www.instagram.com',
+        'www.facebook.com',
+        'www.tumblr.com',
+        'plus.google.com',
+        'www.fandango.com',
+        'support.google.com',
+        'www.vudu.com',
+        'www.entershanementreviews.com',
+        'twitch.tv'
+    }
     headers = {'User-Agent' : 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:88) Gecko/20100101 Firefox/88.0'}
     clean = re.compile('<.*?>')
 
@@ -24,7 +47,6 @@ class WebCrawler():
         self.start_link = WebCrawler.link
 
         self.found_link = set()
-        self.allow_domain = WebCrawler.allow_domain
         self.scrap_data = {}
         self.metadata = {}
 
@@ -34,23 +56,27 @@ class WebCrawler():
     def setup_dir(self):
         if not os.path.exists("./data/web-data"):
             os.mkdir("./data/web-data")
-
-    def load_metadata(self):
-        if os.path.exists('./data/metadata.json'):  # load metadata if file was found
-            metadata_json = open('./data/metadata.json')
-            self.metadata = json.load(metadata_json)
-        else:  # make file if no file
-            data = {'twitter-keyword' : [], 'web-keyword' : [], 'web' : []}
+        if not os.path.exists('./data/metadata.json'):
+            data = {'twitter-keyword' : {}, 'web-keyword' : [], 'web' : [], 'link ref': {}}
             with open('./data/metadata.json', 'w') as outfile:
                 JSON = json.dumps(data, indent=4)
                 outfile.write(JSON)
-            self.metadata = data
+
+    def save_metadata(self):
+        with open('./data/metadata.json', 'w') as outfile:
+            JSON = json.dumps(self.metadata, indent=4)
+            outfile.write(JSON)
+
+    def load_metadata(self):
+        metadata_json = open('./data/metadata.json')
+        self.metadata = json.load(metadata_json)
 
     def scrap(self):
         for domain in self.start_link:
             response = requests.get(domain, headers=WebCrawler.headers)
             if response.status_code >= 400:
                 continue
+            current_domain = urlparse(domain).netloc
             bs = BeautifulSoup(response.text, 'html.parser')
 
             # remove unuse tag
@@ -58,7 +84,10 @@ class WebCrawler():
             for tag in unuse_tag:
                 if tag != None:
                     tag.decompose()
-            self.scrap_data[domain] = self.clean_html(str(bs))
+
+            if current_domain not in self.scrap_data.keys():
+                self.scrap_data[current_domain] = {}
+            self.scrap_data[current_domain][domain] = self.clean_html(str(bs))
 
             # find next link
             LINK = set()
@@ -73,11 +102,19 @@ class WebCrawler():
                     link = domain + link
                 if link in self.found_link:         # if already found link
                     continue
-                for DOMAIN in self.allow_domain:
-                    if link.find(DOMAIN) != -1:  # in allow domain
-                        LINK.add(link)
-                        self.found_link.add(link)
-                        break
+                
+                link_domain = urlparse(link).netloc
+                if link_domain not in WebCrawler.non_scrap_domain:
+                    LINK.add(link)
+                    self.found_link.add(link)
+
+                # count link ref
+                if link_domain != current_domain:       # not same domain
+                    if link_domain not in self.metadata['link ref'].keys():
+                        self.metadata['link ref'][link_domain] = 1
+                    else:
+                        self.metadata['link ref'][link_domain] += 1
+
 
             # use thread to go next link
             n = len(LINK)
@@ -87,13 +124,14 @@ class WebCrawler():
                     executor.shutdown(wait=True)
 
         self.save_to_data()
+        self.save_metadata()
 
 
     def fetch(self, domain, session, url):
         with session.get(url, headers=WebCrawler.headers) as response:
             if response.status_code >= 400:
                 return
-            self.found_link.add(domain)
+            current_domain = urlparse(url).netloc
             print(f'current url : {url}', end='\r')
             bs = BeautifulSoup(response.text, 'html.parser')
 
@@ -102,7 +140,10 @@ class WebCrawler():
             for tag in unuse_tag:
                 if tag != None:
                     tag.decompose()
-            self.scrap_data[url] = self.clean_html(str(bs))
+            
+            if current_domain not in self.scrap_data.keys():
+                self.scrap_data[current_domain] = {}
+            self.scrap_data[current_domain][url] = self.clean_html(str(bs))
 
             # find next link
             LINK = set()
@@ -118,11 +159,18 @@ class WebCrawler():
                     link = domain + link
                 if link in self.found_link:         # if already found link
                     continue
-                for DOMAIN in self.allow_domain:
-                    if link.find(DOMAIN) != -1:  # in allow domain
-                        LINK.add(link)
-                        self.found_link.add(link)
-                        break
+
+                link_domain = urlparse(link).netloc
+                if link_domain not in WebCrawler.non_scrap_domain:
+                    LINK.add(link)
+                    self.found_link.add(link)
+
+                # count link ref
+                if link_domain != current_domain:       # not same domain
+                    if link_domain not in self.metadata['link ref'].keys():
+                        self.metadata['link ref'][link_domain] = 1
+                    else:
+                        self.metadata['link ref'][link_domain] += 1
 
             # use thread to go next link
             n = len(LINK)
@@ -135,6 +183,7 @@ class WebCrawler():
         with session.get(url, headers=WebCrawler.headers) as response:
             if response.status_code >= 400:
                 return
+            current_domain = urlparse(url).netloc
             print(f'current url(sub) : {url}', end='\r')
             bs = BeautifulSoup(response.text, 'html.parser')
             # remove unuse tag
@@ -142,12 +191,38 @@ class WebCrawler():
             for tag in unuse_tag:
                 if tag != None:
                     tag.decompose()
-            self.scrap_data[url] = self.clean_html(str(bs))
+            
+            if current_domain not in self.scrap_data.keys():
+                self.scrap_data[current_domain] = {}
+            self.scrap_data[current_domain][url] = self.clean_html(str(bs))
+
+            for a in bs.find_all('a'):              # find all tag a
+                try:
+                    link = a.attrs['href']
+                except KeyError:
+                    continue
+                if link == None:                    # no href found
+                    continue
+                if link.find('https') == -1:        # is relative link
+                    link = url + link
+                if link in self.found_link:         # if already found link
+                    continue
+                
+                link_domain = urlparse(link).netloc
+                # count link ref
+                if link_domain != current_domain:       # not same domain
+                    if link_domain not in self.metadata['link ref'].keys():
+                        self.metadata['link ref'][link_domain] = 1
+                    else:
+                        self.metadata['link ref'][link_domain] += 1
 
     def save_to_data(self):
-        with open("./data/web-data.json", 'w') as outfile:
-            JSON = json.dumps(self.scrap_data, indent=4) 
-            outfile.write(JSON)
+        for domain in self.scrap_data:
+            if not os.path.exists(f'./data/web-data/{domain}'):
+                os.mkdir(f'./data/web-data/{domain}')
+            with open(f"./data/web-data/{domain}/data.json", 'w') as outfile:
+                JSON = json.dumps(self.scrap_data[domain], indent=4) 
+                outfile.write(JSON)
 
     def clean_html(self, html):
         clean_text = re.sub(WebCrawler.clean, '', html)     # remove all html tag
@@ -167,17 +242,15 @@ class TwitterCrawler():
     def setup_dir(self):
         if not os.path.exists(f"./data/tweets/"): 
             os.mkdir(f"./data/tweets/")
-        
-    def load_metadata(self):
-        if os.path.exists('./data/metadata.json'):  # load metadata if file was found
-            metadata_json = open('./data/metadata.json')
-            self.metadata = json.load(metadata_json)
-        else:  # make file if no file
-            data = {'twitter-keyword' : [], 'web-keyword' : [], 'web' : []}
+        if not os.path.exists('./data/metadata.json'):
+            data = {'twitter-keyword' : {}, 'web-keyword' : [], 'web' : [], 'link ref': {}}
             with open('./data/metadata.json', 'w') as outfile:
                 JSON = json.dumps(data, indent=4)
                 outfile.write(JSON)
-            self.metadata = data
+        
+    def load_metadata(self):
+        metadata_json = open('./data/metadata.json')
+        self.metadata = json.load(metadata_json)
 
     def save_metadata(self):
         with open('./data/metadata.json', 'w') as outfile:
@@ -213,7 +286,7 @@ class TwitterCrawler():
                 self.metadata['twitter-keyword'][keyword] = {'date' : []}
             if day in self.metadata['twitter-keyword'][keyword]['date']:
                 continue
-            print(f"searching : {day}")
+            print(f"searching [{keyword}]: {day}")
             tweets = tw.Cursor(api.search_tweets, 
                         q=f"{keyword} -filter:retweets",
                         lang="en",
