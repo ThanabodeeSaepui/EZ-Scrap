@@ -276,6 +276,11 @@ class TwitterCrawler():
             exit(1)
 
     def search_tweets(self, keyword):
+        reg = re.compile(r'[a-zA-Z]')
+        if reg.match(keyword.replace("#","")):
+            use_lan = "en"
+        else:
+            use_lan = "th"
         if not os.path.exists(f"./data/tweets/{keyword}"):  # create dir for new keyword if not exist
             os.makedirs(f"./data/tweets/{keyword}")
         api = self.connect()
@@ -289,7 +294,7 @@ class TwitterCrawler():
             print(f"searching [{keyword}]: {day}")
             tweets = tw.Cursor(api.search_tweets, 
                         q=f"{keyword} -filter:retweets",
-                        lang="en",
+                        lang=use_lan,
                         until=until_day).items(900)
 
             # use set to remove duplicate tweet
@@ -307,7 +312,7 @@ class TwitterCrawler():
                 remove_url(tweet.text),
                 tweet.favorite_count,
                 tweet.retweet_count,
-                sentiment(TextBlob(stem(cleanText(tweet.text)))),
+                sentiment(TextBlob(stem(cleanText(tweet.text)))) if use_lan == "en" else sentiment_th(cleanText_th(tweet.text)),
                 f"https://twitter.com/twitter/statuses/{tweet.id}"] for tweet in tweets]
 
             tweet_text = pd.DataFrame(data=users_locs, 
@@ -340,6 +345,24 @@ def cleanText(text):
     text = ' '.join(text)
     return text
 
+def cleanText_th(text):
+
+    text = re.sub('http://\S+|https://\S+', '', text) # remove url
+
+
+    url = "https://api.aiforthai.in.th/textcleansing" #api for remove emoji
+    
+    params = {f'text':{text}}
+    
+    
+    headers = {
+        'Apikey': "fIwWRjuLjs8KrK8BcA7kaj5das47eZpH",
+        }
+    
+    response = requests.request("GET", url, headers=headers, params=params)
+    
+    return response.json()['cleansing_text']
+
 def stem(text):
     # This function is used to stem the given sentence
     porter = PorterStemmer()
@@ -357,6 +380,23 @@ def sentiment(cleaned_text):
         return 'negative'
     else:
         return 'neutral'
+
+def sentiment_th(clean_text):
+
+    url = "https://api.aiforthai.in.th/ssense"
+    params = {'text':clean_text}
+    headers = {
+        'Apikey': "fIwWRjuLjs8KrK8BcA7kaj5das47eZpH"
+        }
+    response = requests.get(url, headers=headers, params=params)
+
+    if response.json()['sentiment']['polarity'] == '':
+        polarity = "neutral"
+    else:
+        polarity = response.json()['sentiment']['polarity']
+    
+    return polarity
+
 
 def remove_url(txt):
     """Replace URLs found in a text string with nothing 
