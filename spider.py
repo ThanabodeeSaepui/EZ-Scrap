@@ -310,7 +310,7 @@ class TwitterCrawler():
                 tweet.user.screen_name,
                 tweet.user.location if tweet.user.location != '' else 'unknown',
                 tweet.created_at.replace(tzinfo=None),
-                remove_url(tweet.text),
+                remove_url(tweet.text) if use_lan == "en" else remove_url_th(tweet.text),
                 tweet.favorite_count,
                 tweet.retweet_count,
                 sentiment(TextBlob(stem(cleanText(tweet.text)))) if use_lan == "en" else sentiment_th(cleanText_th(tweet.text)),
