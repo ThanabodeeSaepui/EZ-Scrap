@@ -58,17 +58,17 @@ class WebCrawler():
             os.mkdir("./data/web-data")
         if not os.path.exists('./data/metadata.json'):
             data = {'twitter-keyword' : {}, 'web-keyword' : [], 'web' : [], 'link ref': {}}
-            with open('./data/metadata.json', 'w') as outfile:
+            with open('./data/metadata.json', 'w', encoding="UTF-8") as outfile:
                 JSON = json.dumps(data, indent=4)
                 outfile.write(JSON)
 
     def save_metadata(self):
-        with open('./data/metadata.json', 'w') as outfile:
+        with open('./data/metadata.json', 'w' , encoding="UTF-8") as outfile:
             JSON = json.dumps(self.metadata, indent=4)
             outfile.write(JSON)
 
     def load_metadata(self):
-        metadata_json = open('./data/metadata.json')
+        metadata_json = open('./data/metadata.json',encoding="UTF-8")
         self.metadata = json.load(metadata_json)
 
     def scrap(self):
@@ -220,7 +220,7 @@ class WebCrawler():
         for domain in self.scrap_data:
             if not os.path.exists(f'./data/web-data/{domain}'):
                 os.mkdir(f'./data/web-data/{domain}')
-            with open(f"./data/web-data/{domain}/data.json", 'w') as outfile:
+            with open(f"./data/web-data/{domain}/data.json", 'w', encoding="UTF-8") as outfile:
                 JSON = json.dumps(self.scrap_data[domain], indent=4) 
                 outfile.write(JSON)
 
@@ -244,16 +244,16 @@ class TwitterCrawler():
             os.mkdir(f"./data/tweets/")
         if not os.path.exists('./data/metadata.json'):
             data = {'twitter-keyword' : {}, 'web-keyword' : [], 'web' : [], 'link ref': {}}
-            with open('./data/metadata.json', 'w') as outfile:
+            with open('./data/metadata.json', 'w', encoding="UTF-8") as outfile:
                 JSON = json.dumps(data, indent=4)
                 outfile.write(JSON)
         
     def load_metadata(self):
-        metadata_json = open('./data/metadata.json')
+        metadata_json = open('./data/metadata.json',encoding="UTF-8")
         self.metadata = json.load(metadata_json)
 
     def save_metadata(self):
-        with open('./data/metadata.json', 'w') as outfile:
+        with open('./data/metadata.json', 'w', encoding="UTF-8") as outfile:
             JSON = json.dumps(self.metadata, indent=4)
             outfile.write(JSON)
 
@@ -287,6 +287,7 @@ class TwitterCrawler():
         for i in range(7):  # search 7 day
             until_day = datetime.strftime(datetime.now() - timedelta(i-1), '%Y-%m-%d')
             day = datetime.strftime(datetime.now() - timedelta(i), '%Y-%m-%d')
+            start_day = (datetime.today() - timedelta(i+1)).date()
             if keyword not  in self.metadata['twitter-keyword'].keys():
                 self.metadata['twitter-keyword'][keyword] = {'date' : []}
             if day in self.metadata['twitter-keyword'][keyword]['date']:
@@ -313,7 +314,10 @@ class TwitterCrawler():
                 tweet.favorite_count,
                 tweet.retweet_count,
                 sentiment(TextBlob(stem(cleanText(tweet.text)))) if use_lan == "en" else sentiment_th(cleanText_th(tweet.text)),
-                f"https://twitter.com/twitter/statuses/{tweet.id}"] for tweet in tweets]
+                f"https://twitter.com/twitter/statuses/{tweet.id}"] for tweet in tweets if tweet.created_at.replace(tzinfo=None).date() > start_day]
+            
+            if len(users_locs) == 0:
+                continue
 
             tweet_text = pd.DataFrame(data=users_locs, 
                 columns=['keyword','user','location','post date','tweet', 'favorite count', 'retweet count','sentiment','tweet link'])
