@@ -26,5 +26,27 @@
         "https://www.imdb.com/news/top",
         "https://www.metacritic.com",
         "https://www.rottentomatoes.com"
-    ]
+    ],
+    "link ref": {
+        "www.imdb.com": 11,
+        "editorial.rottentomatoes.com": 0,
+        "www.empireonline.com": 3,
+        "collider.com": 2,
+        "www.slashfilm.com": 3,
+        "www.cinemablend.com": 3,
+        "www.hollywoodreporter.com": 53,
+        "www.movienewsnet.com": 0,
+        "www.nme.com": 1,
+        "movieweb.com": 1,
+        "www.cbr.com": 3,
+        "www.joblo.com": 0,
+        "www.bbc.com": 4,
+        "www.nytimes.com": 26,
+        "www.euronews.com": 0,
+        "www.thewrap.com": 3,
+        "www.irishtimes.com": 0,
+        "wegotthiscovered.com": 0,
+        "www.rollingstone.com": 1,
+        "screenrant.com": 2
+    }
 }

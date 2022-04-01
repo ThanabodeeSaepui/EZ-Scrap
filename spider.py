@@ -16,12 +16,6 @@ from nltk.stem import PorterStemmer
 from textblob import TextBlob
 
 class WebCrawler():
-    link = [
-        'https://www.imdb.com/news/movie',
-        'https://www.empireonline.com/movies/news/',
-        'https://editorial.rottentomatoes.com/news/',
-        'https://collider.com',
-        'https://screenrant.com/movie-news/']
     non_scrap_domain = {
         't.co',
         'twitter.com',
@@ -44,7 +38,29 @@ class WebCrawler():
     clean = re.compile('<.*?>')
 
     def __init__(self):
-        self.start_link = WebCrawler.link
+        self.start_link = [
+            'https://www.imdb.com/news/movie',
+            'https://editorial.rottentomatoes.com/news/',
+            'https://www.empireonline.com/movies/news/',
+            'https://collider.com',
+            'https://www.slashfilm.com/category/movies/',
+            'https://www.cinemablend.com/news',
+            'https://www.hollywoodreporter.com/c/movies/movie-news/',
+            'https://www.movienewsnet.com',
+            'https://www.nme.com/news/film',
+            'https://movieweb.com/movie-news/',
+            'https://www.cbr.com/category/movies/news-movies/',
+            'https://www.joblo.com/movie-news/',
+            'https://www.bbc.com/news/topics/cg41ylwvgjyt/film',
+            'https://www.nytimes.com/section/movies',
+            'https://www.euronews.com/culture/see/cinema',
+            'https://www.thewrap.com/category/movies/',
+            'https://www.irishtimes.com/culture/film',
+            'https://wegotthiscovered.com/movies/',
+            'https://www.rollingstone.com/movies/movie-news/',
+            'https://screenrant.com/movie-news/'
+            ]
+        self.start_link_domain = [urlparse(link).netloc for link in self.start_link]
 
         self.found_link = set()
         self.scrap_data = {}
@@ -71,7 +87,13 @@ class WebCrawler():
         metadata_json = open('./data/metadata.json',encoding="UTF-8")
         self.metadata = json.load(metadata_json)
 
+    def reset_link_ref(self):
+        self.metadata['link ref'] = {}
+        for domain in self.start_link_domain:
+            self.metadata['link ref'][domain] = 0
+
     def scrap(self):
+        self.reset_link_ref()
         for domain in self.start_link:
             response = requests.get(domain, headers=WebCrawler.headers)
             if response.status_code >= 400:
@@ -79,6 +101,7 @@ class WebCrawler():
             current_domain = urlparse(domain).netloc
             bs = BeautifulSoup(response.text, 'html.parser')
 
+            title = bs.find('title').text
             # remove unuse tag
             unuse_tag = ['script', 'style ', 'noscript', 'head', 'footer', 'iframe']
             for tag in unuse_tag:
@@ -88,7 +111,9 @@ class WebCrawler():
 
             if current_domain not in self.scrap_data.keys():
                 self.scrap_data[current_domain] = {}
-            self.scrap_data[current_domain][domain] = self.clean_html(str(bs))
+            self.scrap_data[current_domain][domain] = {}
+            self.scrap_data[current_domain][domain]['title'] = title.strip()
+            self.scrap_data[current_domain][domain]['content'] = self.clean_html(str(bs))
 
             # find next link
             LINK = set()
@@ -105,15 +130,13 @@ class WebCrawler():
                     continue
                 
                 link_domain = urlparse(link).netloc
-                if link_domain not in WebCrawler.non_scrap_domain:
+                if (link_domain not in WebCrawler.non_scrap_domain) and (link_domain in self.start_link_domain):
                     LINK.add(link)
                     self.found_link.add(link)
 
                 # count link ref
                 if link_domain != current_domain:       # not same domain
-                    if link_domain not in self.metadata['link ref'].keys():
-                        self.metadata['link ref'][link_domain] = 1
-                    else:
+                    if link_domain in self.metadata['link ref'].keys():
                         self.metadata['link ref'][link_domain] += 1
 
 
@@ -124,8 +147,8 @@ class WebCrawler():
                     executor.map(self.fetch, [domain]*n ,[session]*n, [*LINK])
                     executor.shutdown(wait=True)
 
-        self.save_metadata()
-        self.save_to_data()
+            self.save_metadata()
+            self.save_to_data(domain)
 
 
     def fetch(self, domain, session, url):
@@ -136,6 +159,7 @@ class WebCrawler():
             print(f'current url : {url}', end='\r')
             bs = BeautifulSoup(response.text, 'html.parser')
 
+            title = bs.find('title').text
             # remove unuse tag
             unuse_tag = ['script', 'style ', 'noscript', 'head', 'footer', 'iframe']
             for tag in unuse_tag:
@@ -145,7 +169,10 @@ class WebCrawler():
             
             if current_domain not in self.scrap_data.keys():
                 self.scrap_data[current_domain] = {}
-            self.scrap_data[current_domain][url] = self.clean_html(str(bs))
+            self.scrap_data[current_domain][url] = {}
+            self.scrap_data[current_domain][url]['title'] = title.strip()
+            self.scrap_data[current_domain][url]['content'] = self.clean_html(str(bs))
+
 
             # find next link
             LINK = set()
@@ -163,15 +190,13 @@ class WebCrawler():
                     continue
 
                 link_domain = urlparse(link).netloc
-                if link_domain not in WebCrawler.non_scrap_domain:
+                if (link_domain not in WebCrawler.non_scrap_domain) and (link_domain in self.start_link_domain):
                     LINK.add(link)
                     self.found_link.add(link)
 
                 # count link ref
                 if link_domain != current_domain:       # not same domain
-                    if link_domain not in self.metadata['link ref'].keys():
-                        self.metadata['link ref'][link_domain] = 1
-                    else:
+                    if link_domain in self.metadata['link ref'].keys():
                         self.metadata['link ref'][link_domain] += 1
 
             # use thread to go next link
@@ -189,6 +214,7 @@ class WebCrawler():
             print(f'current url(sub) : {url}', end='\r')
             bs = BeautifulSoup(response.text, 'html.parser')
 
+            title = bs.find('title').text
             # remove unuse tag
             unuse_tag = ['script', 'style ', 'noscript', 'head', 'footer', 'iframe']
             for tag in unuse_tag:
@@ -199,7 +225,9 @@ class WebCrawler():
             
             if current_domain not in self.scrap_data.keys():
                 self.scrap_data[current_domain] = {}
-            self.scrap_data[current_domain][url] = self.clean_html(str(bs))
+            self.scrap_data[current_domain][url] = {}
+            self.scrap_data[current_domain][url]['title'] = title.strip()
+            self.scrap_data[current_domain][url]['content'] = self.clean_html(str(bs))
 
             for a in bs.find_all('a'):              # find all tag a
                 try:
@@ -216,19 +244,17 @@ class WebCrawler():
                 link_domain = urlparse(link).netloc
                 # count link ref
                 if link_domain != current_domain:       # not same domain
-                    if link_domain not in self.metadata['link ref'].keys():
-                        self.metadata['link ref'][link_domain] = 1
-                    else:
+                    if link_domain in self.metadata['link ref'].keys():
                         self.metadata['link ref'][link_domain] += 1
 
-    def save_to_data(self):
-        print("Saving to data")
-        for domain in self.scrap_data:
-            if not os.path.exists(f'./data/web-data/{domain}'):
-                os.mkdir(f'./data/web-data/{domain}')
-            with open(f"./data/web-data/{domain}/data.json", 'w', encoding="UTF-8") as outfile:
-                JSON = json.dumps(self.scrap_data[domain], indent=4) 
-                outfile.write(JSON)
+    def save_to_data(self, domain):
+        domain = urlparse(domain).netloc
+        print(f"Saving to data : {domain}")
+        if not os.path.exists(f'./data/web-data/{domain}'):
+            os.mkdir(f'./data/web-data/{domain}')
+        with open(f"./data/web-data/{domain}/data.json", 'w', encoding="UTF-8") as outfile:
+            JSON = json.dumps(self.scrap_data[domain], indent=4) 
+            outfile.write(JSON)
 
     def clean_html(self, html):
         clean_text = re.sub(WebCrawler.clean, '', html)     # remove all html tag
