@@ -80,10 +80,11 @@ class WebCrawler():
             bs = BeautifulSoup(response.text, 'html.parser')
 
             # remove unuse tag
-            unuse_tag = [bs.head, bs.footer, bs.script, bs.noscript, bs.iframe]
+            unuse_tag = ['script', 'style ', 'noscript', 'head', 'footer', 'iframe']
             for tag in unuse_tag:
-                if tag != None:
-                    tag.decompose()
+                for s in bs.select(tag):
+                    if s != None:
+                        s.extract()
 
             if current_domain not in self.scrap_data.keys():
                 self.scrap_data[current_domain] = {}
@@ -123,8 +124,8 @@ class WebCrawler():
                     executor.map(self.fetch, [domain]*n ,[session]*n, [*LINK])
                     executor.shutdown(wait=True)
 
-        self.save_to_data()
         self.save_metadata()
+        self.save_to_data()
 
 
     def fetch(self, domain, session, url):
@@ -136,10 +137,11 @@ class WebCrawler():
             bs = BeautifulSoup(response.text, 'html.parser')
 
             # remove unuse tag
-            unuse_tag = [bs.head, bs.footer, bs.script, bs.noscript, bs.iframe]
+            unuse_tag = ['script', 'style ', 'noscript', 'head', 'footer', 'iframe']
             for tag in unuse_tag:
-                if tag != None:
-                    tag.decompose()
+                for s in bs.select(tag):
+                    if s != None:
+                        s.extract()
             
             if current_domain not in self.scrap_data.keys():
                 self.scrap_data[current_domain] = {}
@@ -186,11 +188,14 @@ class WebCrawler():
             current_domain = urlparse(url).netloc
             print(f'current url(sub) : {url}', end='\r')
             bs = BeautifulSoup(response.text, 'html.parser')
+
             # remove unuse tag
-            unuse_tag = [bs.head, bs.footer, bs.script, bs.noscript, bs.iframe]
+            unuse_tag = ['script', 'style ', 'noscript', 'head', 'footer', 'iframe']
             for tag in unuse_tag:
-                if tag != None:
-                    tag.decompose()
+                for s in bs.select(tag):
+                    if s != None:
+                        s.extract()
+
             
             if current_domain not in self.scrap_data.keys():
                 self.scrap_data[current_domain] = {}
@@ -217,6 +222,7 @@ class WebCrawler():
                         self.metadata['link ref'][link_domain] += 1
 
     def save_to_data(self):
+        print("Saving to data")
         for domain in self.scrap_data:
             if not os.path.exists(f'./data/web-data/{domain}'):
                 os.mkdir(f'./data/web-data/{domain}')
