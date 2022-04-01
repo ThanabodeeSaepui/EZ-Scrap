@@ -311,17 +311,29 @@ class TwitterCrawler():
             tweets = list(tweets_set)
 
             # convert to dataframe
-            users_locs = [[
-                keyword,
-                tweet.user.screen_name,
-                tweet.user.location if tweet.user.location != '' else 'unknown',
-                tweet.created_at.replace(tzinfo=None),
-                remove_url(tweet.text) if use_lan == "en" else remove_url_th(tweet.text),
-                tweet.favorite_count,
-                tweet.retweet_count,
-                sentiment(TextBlob(stem(cleanText(tweet.text)))) if use_lan == "en" else sentiment_th(cleanText_th(tweet.text)),
-                f"https://twitter.com/twitter/statuses/{tweet.id}"] for tweet in tweets if tweet.created_at.replace(tzinfo=None).date() > start_day]
-            
+            users_locs = []
+            for tweet in tweets:
+                if use_lan == "en":
+                    tweet_sen = sentiment(TextBlob(stem(cleanText(tweet.text))))
+                else:
+                    try:
+                        tweet_sen = sentiment_th(cleanText_th(tweet.text))
+                    except:
+                        continue
+
+                if tweet.created_at.replace(tzinfo=None).date() > start_day:
+                    print(f"https://twitter.com/twitter/statuses/{tweet.id}")
+                    locs = [
+                        keyword,
+                        tweet.user.screen_name,
+                        tweet.user.location if tweet.user.location != '' else 'unknown',
+                        tweet.created_at.replace(tzinfo=None),
+                        remove_url(tweet.text) if use_lan == "en" else remove_url_th(tweet.text),
+                        tweet.favorite_count,
+                        tweet.retweet_count,
+                        tweet_sen,
+                        f"https://twitter.com/twitter/statuses/{tweet.id}"]
+                    users_locs.append(locs)
             if len(users_locs) == 0:
                 continue
 
@@ -373,6 +385,17 @@ def cleanText_th(text):
     
     return response.json()['cleansing_text']
 
+def word_tokenize_th(text):
+    url ='https://api.aiforthai.in.th/lextoplus'
+
+    headers = {'Apikey':"fIwWRjuLjs8KrK8BcA7kaj5das47eZpH"}
+    
+    params = {'text':text,'norm':'1'}
+    
+    response = requests.get(url, params=params, headers=headers)
+    
+    return response.json()['tokens']
+
 def stem(text):
     # This function is used to stem the given sentence
     porter = PorterStemmer()
@@ -399,11 +422,10 @@ def sentiment_th(clean_text):
         'Apikey': "fIwWRjuLjs8KrK8BcA7kaj5das47eZpH"
         }
     response = requests.get(url, headers=headers, params=params)
+    polarity = eval(response.text.replace("false","False").replace("true","True"))['sentiment']['polarity']
 
-    if response.json()['sentiment']['polarity'] == '':
+    if polarity == '':
         polarity = "neutral"
-    else:
-        polarity = response.json()['sentiment']['polarity']
     
     return polarity
 
@@ -437,8 +459,8 @@ def remove_url_th(txt):
     -------
     The same txt string with url's removed.
     """
-
-    return " ".join(re.sub("([^\u0E00-\u0E7Fa-zA-Z' ]|^'|'$|''|(\w+:\/\/\S+))", "", txt).split())
+    txt = re.sub('http://\S+|https://\S+', '', txt)
+    return txt 
 
 if not os.path.exists('./data'):
     os.mkdir('./data')
