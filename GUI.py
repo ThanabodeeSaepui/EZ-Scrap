@@ -9,15 +9,16 @@
 
 
 from PyQt5 import QtCore, QtGui, QtWidgets
-import pandas as pd
+from datetime import date
+from spider import *
 
 
 class Ui_EZ_Scrap(object):
     def setupUi(self, EZ_Scrap):
         font = QtGui.QFont()
-        font.setPointSize(18)
+        font.setPointSize(16)
         EZ_Scrap.setObjectName("EZ_Scrap")
-        EZ_Scrap.resize(997, 710)
+        EZ_Scrap.resize(1241, 760)
         self.centralwidget = QtWidgets.QWidget(EZ_Scrap)
         self.centralwidget.setObjectName("centralwidget")
         self.search_label = QtWidgets.QLabel(self.centralwidget)
@@ -25,25 +26,50 @@ class Ui_EZ_Scrap(object):
         self.search_label.setFont(font)
         self.search_label.setObjectName("search_label")
         self.lineEdit = QtWidgets.QLineEdit(self.centralwidget)
-        self.lineEdit.setGeometry(QtCore.QRect(220, 20, 651, 20))
+        self.lineEdit.setGeometry(QtCore.QRect(470, 20, 651, 20))
         self.lineEdit.setObjectName("lineEdit")
         self.search_bt = QtWidgets.QPushButton(self.centralwidget)
-        self.search_bt.setGeometry(QtCore.QRect(880, 10, 81, 41))
+        self.search_bt.setGeometry(QtCore.QRect(1140, 10, 81, 41))
         self.search_bt.setFont(font)
         self.search_bt.setObjectName("search_bt")
-        self.search_bt.clicked.connect(self.set_grid_table)
+        self.search_bt.clicked.connect(self.search_tweet)
         self.comboBox = QtWidgets.QComboBox(self.centralwidget)
         self.comboBox.setGeometry(QtCore.QRect(110, 20, 81, 22))
         self.comboBox.setObjectName("comboBox")
         self.comboBox.addItem("")
         self.comboBox.addItem("")
         self.table = QtWidgets.QTableWidget(self.centralwidget)
-        self.table.setGeometry(QtCore.QRect(10, 80, 981, 621))
+        self.table.setGeometry(QtCore.QRect(220, 130, 1011, 621))
         self.table.setObjectName("tableView")
+        self.start_date = QtWidgets.QDateEdit(self.centralwidget)
+        self.start_date.setGeometry(QtCore.QRect(330, 20, 110, 22))
+        self.start_date.setObjectName("start_date")
+        self.start_date.setDate(date.today())
+        self.end_date = QtWidgets.QDateEdit(self.centralwidget)
+        self.end_date.setGeometry(QtCore.QRect(330, 60, 110, 22))
+        self.end_date.setObjectName("end_date")
+        self.end_date.setDate(date.today() - timedelta(days=7))
+        self.label = QtWidgets.QLabel(self.centralwidget)
+        self.label.setGeometry(QtCore.QRect(220, 20, 101, 21))
+        self.label.setFont(font)
+        self.label_2 = QtWidgets.QLabel(self.centralwidget)
+        self.label_2.setGeometry(QtCore.QRect(220, 60, 91, 20))
+        self.label_2.setFont(font)
+        self.label_2.setObjectName("label_2")
+        self.listWidget = QtWidgets.QListWidget(self.centralwidget)
+        self.listWidget.setGeometry(QtCore.QRect(10, 190, 201, 301))
+        self.listWidget.setObjectName("listWidget")
+        self.label_3 = QtWidgets.QLabel(self.centralwidget)
+        self.label_3.setGeometry(QtCore.QRect(10, 140, 141, 41))
+        self.label_3.setFont(font)
+        self.label_3.setObjectName("label_3")
         EZ_Scrap.setCentralWidget(self.centralwidget)
 
         self.retranslateUi(EZ_Scrap)
         QtCore.QMetaObject.connectSlotsByName(EZ_Scrap)
+
+        self.update_search_word()
+        self.tw_crawler = TwitterCrawler()
 
     def retranslateUi(self, EZ_Scrap):
         _translate = QtCore.QCoreApplication.translate
@@ -52,6 +78,10 @@ class Ui_EZ_Scrap(object):
         self.search_bt.setText(_translate("EZ_Scrap", "Search"))
         self.comboBox.setItemText(0, _translate("EZ_Scrap", "Twitter"))
         self.comboBox.setItemText(1, _translate("EZ_Scrap", "Web"))
+        self.label.setText(_translate("EZ_Scrap", "Start Date"))
+        self.label_2.setText(_translate("EZ_Scrap", "End Date"))
+        self.label_3.setText(_translate("EZ_Scrap", "Search Word"))
+
     def confirm_scrap_popup(self):
         popup = QtWidgets.QMessageBox()
         popup.setWindowTitle("Confirm scrap")
@@ -62,11 +92,26 @@ class Ui_EZ_Scrap(object):
         x = popup.exec_()
     
     def popup_button(self , i):
-        print(i.text())
+        if i.text() == "OK":
+            self.confirm = True
+        else:
+            self.confirm = False
     
-    def load_file(self):
-        self.filepath = ("./data/tweets.xlsx")
-        self.data = pd.read_excel(self.filepath, engine='openpyxl')
+    def update_search_word(self):
+        self.listWidget.clear()
+        self.search_word = os.listdir("./data/tweets")
+        for word in self.search_word:
+            self.listWidget.addItem(word)
+
+    def search_tweet(self):
+        keyword = self.lineEdit.text()
+        if keyword not in self.search_word:
+            self.confirm_scrap_popup()
+            if self.confirm == None:
+                return
+            if self.confirm:
+                self.tw_crawler.search_tweets(keyword)
+                self.update_search_word()
 
     
     def set_grid_table(self):
