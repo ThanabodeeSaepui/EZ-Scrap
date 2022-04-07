@@ -5,6 +5,8 @@ from urllib.parse import urlparse
 from datetime import datetime, timedelta
 from concurrent.futures import ThreadPoolExecutor
 
+from WebScrap import clean_html, remove_unuse_tag
+
 import requests
 import pandas as pd
 import tweepy as tw
@@ -42,7 +44,7 @@ class WebCrawler():
             'https://www.imdb.com/news/movie',
             'https://editorial.rottentomatoes.com/news/',
             'https://www.empireonline.com/movies/news/',
-            'https://collider.com',
+            'https://collider.com/movie-news/',
             'https://www.slashfilm.com/category/movies/',
             'https://www.cinemablend.com/news',
             'https://www.hollywoodreporter.com/c/movies/movie-news/',
@@ -100,20 +102,15 @@ class WebCrawler():
                 continue
             current_domain = urlparse(domain).netloc
             bs = BeautifulSoup(response.text, 'html.parser')
+            bs = remove_unuse_tag(bs)
 
             title = bs.find('title').text
-            # remove unuse tag
-            unuse_tag = ['script', 'style ', 'noscript', 'head', 'footer', 'iframe']
-            for tag in unuse_tag:
-                for s in bs.select(tag):
-                    if s != None:
-                        s.extract()
 
             if current_domain not in self.scrap_data.keys():
                 self.scrap_data[current_domain] = {}
             self.scrap_data[current_domain][domain] = {}
             self.scrap_data[current_domain][domain]['title'] = title.strip()
-            self.scrap_data[current_domain][domain]['content'] = self.clean_html(str(bs))
+            self.scrap_data[current_domain][domain]['content'] = clean_html(str(bs))
 
             # find next link
             LINK = set()
@@ -158,20 +155,15 @@ class WebCrawler():
             current_domain = urlparse(url).netloc
             print(f'current url : {url}', end='\r')
             bs = BeautifulSoup(response.text, 'html.parser')
+            bs = remove_unuse_tag(bs)
 
             title = bs.find('title').text
-            # remove unuse tag
-            unuse_tag = ['script', 'style ', 'noscript', 'head', 'footer', 'iframe']
-            for tag in unuse_tag:
-                for s in bs.select(tag):
-                    if s != None:
-                        s.extract()
             
             if current_domain not in self.scrap_data.keys():
                 self.scrap_data[current_domain] = {}
             self.scrap_data[current_domain][url] = {}
             self.scrap_data[current_domain][url]['title'] = title.strip()
-            self.scrap_data[current_domain][url]['content'] = self.clean_html(str(bs))
+            self.scrap_data[current_domain][url]['content'] = clean_html(str(bs))
 
 
             # find next link
@@ -213,21 +205,15 @@ class WebCrawler():
             current_domain = urlparse(url).netloc
             print(f'current url(sub) : {url}', end='\r')
             bs = BeautifulSoup(response.text, 'html.parser')
+            bs = remove_unuse_tag(bs)
 
             title = bs.find('title').text
-            # remove unuse tag
-            unuse_tag = ['script', 'style ', 'noscript', 'head', 'footer', 'iframe']
-            for tag in unuse_tag:
-                for s in bs.select(tag):
-                    if s != None:
-                        s.extract()
 
-            
             if current_domain not in self.scrap_data.keys():
                 self.scrap_data[current_domain] = {}
             self.scrap_data[current_domain][url] = {}
             self.scrap_data[current_domain][url]['title'] = title.strip()
-            self.scrap_data[current_domain][url]['content'] = self.clean_html(str(bs))
+            self.scrap_data[current_domain][url]['content'] = clean_html(str(bs))
 
             for a in bs.find_all('a'):              # find all tag a
                 try:
@@ -256,12 +242,6 @@ class WebCrawler():
             JSON = json.dumps(self.scrap_data[domain], indent=4) 
             outfile.write(JSON)
 
-    def clean_html(self, html):
-        clean_text = re.sub(WebCrawler.clean, '', html)     # remove all html tag
-        for char in ['\n', '\t', '\r']:                     # remove escape character
-            clean_text = clean_text.replace(char, '')
-        clean_text = re.sub(' +', ' ', clean_text)
-        return clean_text
 
 class TwitterCrawler():
 
@@ -324,7 +304,6 @@ class TwitterCrawler():
                 self.metadata['twitter-keyword'][keyword] = {'date' : []}
             if day in self.metadata['twitter-keyword'][keyword]['date']:
                 continue
-            print(f"searching [{keyword}]: {day}")
             tweets = tw.Cursor(api.search_tweets, 
                         q=f"{keyword} -filter:retweets",
                         lang=use_lan,
