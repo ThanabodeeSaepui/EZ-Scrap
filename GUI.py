@@ -112,15 +112,15 @@ class Ui_EZ_Scrap(object):
             if self.confirm:
                 self.tw_crawler.search_tweets(keyword)
                 self.update_search_word()
+        self.get_tweets()
 
     
-    def set_grid_table(self):
-        self.load_file()
-        self.table.setRowCount(self.data.shape[0])
-        self.table.setColumnCount(self.data.shape[1])
-        self.table.setHorizontalHeaderLabels(self.data.columns)
+    def set_grid_table(self,data):
+        self.table.setRowCount(data.shape[0])
+        self.table.setColumnCount(data.shape[1])
+        self.table.setHorizontalHeaderLabels(data.columns)
 
-        for row in self.data.iterrows():
+        for row in data.iterrows():
             values = row[1]
             for col_index,value in enumerate(values):
                 tableItem = QtWidgets.QTableWidgetItem(str(value))
@@ -129,6 +129,24 @@ class Ui_EZ_Scrap(object):
         self.table.setColumnWidth(4,1000)
         self.table.setColumnWidth(8,340)
 
+    def get_tweets(self):
+        start_day = self.start_date.date().toPyDate() 
+        end_day = self.end_date.date().toPyDate()
+
+        keyword = self.lineEdit.text()
+        file_list = os.listdir(f"./data/tweets/{keyword}")
+        df_list = []
+        while start_day >= end_day:
+            day = date.strftime(start_day,'%Y-%m-%d')
+            print(day)
+            if f"{day}.xlsx" in file_list:
+                df = pd.read_excel(f"./data/tweets/{keyword}/{day}.xlsx",engine="openpyxl")
+                df_list.append(df)
+            start_day -= timedelta(1)
+        tweets = pd.concat(df_list, ignore_index=True)
+        tweets = tweets.sort_values("post date")
+        self.set_grid_table(tweets)
+    
 
 if __name__ == "__main__":
     import sys
