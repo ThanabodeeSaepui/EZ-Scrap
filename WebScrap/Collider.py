@@ -15,7 +15,7 @@ def ScrapSite() -> dict:
 
             content = ''
             section = bs.find('section', {'class' : 'article-body'})
-            for p in section.find_all():
+            for p in section.find_all('p'):
                 content += f'{clean_html(p.text)} '
             data[url]['content'] = content
 
@@ -43,7 +43,7 @@ def ScrapSite() -> dict:
     n = len(pages_list)
     with ThreadPoolExecutor(max_workers=n) as executor:
         with requests.Session() as session:
-            executor.map(fetch, [session]*n, [*pages_list])
+            executor.map(fetch, [session]*n, pages_list)
             executor.shutdown(wait=True)
 
     return data

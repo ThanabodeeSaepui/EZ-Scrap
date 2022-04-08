@@ -14,7 +14,8 @@ def ScrapSite() -> dict:
             data[url]['title'] = bs.find('h1').text
 
             content = ''
-            for p in bs.find_all('p'):
+            section = bs.find('div', {'data-td-block-uid' : 'tdi_95'})
+            for p in section.find_all('p'):
                 content += f'{clean_html(p.text)} '
             data[url]['content'] = content
 
@@ -26,10 +27,9 @@ def ScrapSite() -> dict:
             bs = remove_unuse_tag(bs)
 
             news_link = []
-            news = bs.find('div', {'class' : 'panel-body'})
-            for a in news.find_all('a'):
-                href = a.attrs['href']
-                news_link.append(href)
+            for h3 in bs.find_all('h3', {'class' : 'entry-title'}):
+                a = h3.find('a')
+                news_link.append(a.attrs['href'])
 
             n = len(news_link)
             with ThreadPoolExecutor(max_workers=n) as executor:
@@ -38,7 +38,7 @@ def ScrapSite() -> dict:
                     executor.shutdown(wait=True)
 
 
-    pages_list = [f'https://editorial.rottentomatoes.com/news/?wpv_paged={i}' for i in range(1, 11)]
+    pages_list = [f'https://www.nme.com/news/film/page/{i}' for i in range(1, 11)]
     n = len(pages_list)
     with ThreadPoolExecutor(max_workers=n) as executor:
         with requests.Session() as session:
@@ -47,8 +47,9 @@ def ScrapSite() -> dict:
 
     return data
 
+
 if __name__ == '__main__':
     data = ScrapSite()
-    with open(f'rottentomatoes.json', 'w', encoding="UTF-8") as outfile:
+    with open(f'nme.json', 'w', encoding="UTF-8") as outfile:
         JSON = json.dumps(data, indent=4) 
         outfile.write(JSON)

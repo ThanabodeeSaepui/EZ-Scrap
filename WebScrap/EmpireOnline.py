@@ -37,7 +37,7 @@ def ScrapSite() -> dict:
             n = len(news_link)
             with ThreadPoolExecutor(max_workers=n) as executor:
                 with requests.Session() as session:
-                    executor.map(sub_fetch, [session]*n, [*news_link])
+                    executor.map(sub_fetch, [session]*n, news_link)
                     executor.shutdown(wait=True)
 
 
