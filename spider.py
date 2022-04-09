@@ -287,7 +287,7 @@ class TwitterCrawler():
             print("Error")
             exit(1)
 
-    def search_tweets(self, keyword):
+    def search_tweets(self, keyword,start_day,end_day):
         reg = re.compile(r'[a-zA-Z]')
         if reg.match(keyword.replace("#","")):
             use_lan = "en"
@@ -296,10 +296,10 @@ class TwitterCrawler():
         if not os.path.exists(f"./data/tweets/{keyword}"):  # create dir for new keyword if not exist
             os.makedirs(f"./data/tweets/{keyword}")
         api = self.connect()
-        for i in range(7):  # search 7 day
-            until_day = datetime.strftime(datetime.now() - timedelta(i-1), '%Y-%m-%d')
-            day = datetime.strftime(datetime.now() - timedelta(i), '%Y-%m-%d')
-            start_day = (datetime.today() - timedelta(i+1)).date()
+        while start_day >= end_day:
+            until_day = datetime.strftime(start_day + timedelta(1), '%Y-%m-%d')
+            day = datetime.strftime(start_day, '%Y-%m-%d')
+            yesterday = (start_day - timedelta(1))
             if keyword not  in self.metadata['twitter-keyword'].keys():
                 self.metadata['twitter-keyword'][keyword] = {'date' : []}
             if day in self.metadata['twitter-keyword'][keyword]['date']:
@@ -326,7 +326,7 @@ class TwitterCrawler():
                     except:
                         continue
 
-                if tweet.created_at.replace(tzinfo=None).date() > start_day:
+                if tweet.created_at.replace(tzinfo=None).date() > yesterday:
                     print(f"https://twitter.com/twitter/statuses/{tweet.id}")
                     locs = [
                         keyword,
@@ -351,6 +351,7 @@ class TwitterCrawler():
             self.metadata['twitter-keyword'][keyword]['date'].append(day)
             self.save_metadata()
             print(f"save to file : {day}.xlsx")
+            start_day -= timedelta(1)
 
 
 def cleanText(text):
