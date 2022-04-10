@@ -75,7 +75,7 @@ class Ui_EZ_Scrap(object):
         self.update_search_word()
         self.tw_crawler = TwitterCrawler()
 
-        self.confirm = None
+        self.confirm = False
 
     def retranslateUi(self, EZ_Scrap):
         _translate = QtCore.QCoreApplication.translate
@@ -143,10 +143,11 @@ class Ui_EZ_Scrap(object):
                     self.confirm_date_scrap_popup(start_day,end_day)
                     break
                 start_day -= timedelta(1)
-        if self.confirm != None:
-            if self.confirm:
-                self.tw_crawler.search_tweets(keyword,start_day,end_day)
-                self.update_search_word()
+        if self.confirm:
+            self.tw_crawler.search_tweets(keyword,start_day,end_day)
+            self.update_search_word()
+        else:
+            return
         if keyword != "":
             self.get_tweets()
 
