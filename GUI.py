@@ -46,12 +46,12 @@ class Ui_EZ_Scrap(object):
         self.start_date.setGeometry(QtCore.QRect(330, 20, 110, 22))
         self.start_date.setObjectName("start_date")
         self.start_date.setDate(date.today())
-        self.start_date.setDisplayFormat("dd MMM yyyy")
+        self.start_date.setDisplayFormat("dd/MM/yyyy")
         self.end_date = QtWidgets.QDateEdit(self.centralwidget)
         self.end_date.setGeometry(QtCore.QRect(330, 60, 110, 22))
         self.end_date.setObjectName("end_date")
         self.end_date.setDate(date.today() - timedelta(days=7))
-        self.end_date.setDisplayFormat("dd MMM yyyy")
+        self.end_date.setDisplayFormat("dd/MM/yyyy")
         self.label = QtWidgets.QLabel(self.centralwidget)
         self.label.setGeometry(QtCore.QRect(220, 20, 101, 21))
         self.label.setFont(font)
@@ -105,6 +105,15 @@ class Ui_EZ_Scrap(object):
         popup.setStandardButtons(QtWidgets.QMessageBox.Ok|QtWidgets.QMessageBox.Cancel)
         popup.buttonClicked.connect(self.popup_button)
         x = popup.exec_()
+
+    def no_text_in_keyword(self):
+        popup = QtWidgets.QMessageBox()
+        popup.setWindowTitle("Error")
+        popup.setText("Please enter text before search")
+        popup.setIcon(QtWidgets.QMessageBox.Critical)
+        popup.setStandardButtons(QtWidgets.QMessageBox.Ok)
+        popup.buttonClicked.connect(lambda:popup.close())
+        x = popup.exec_()
     
     def popup_button(self , i):
         if i.text() == "OK":
@@ -123,7 +132,10 @@ class Ui_EZ_Scrap(object):
         end_day = self.end_date.date().toPyDate()
         keyword = self.lineEdit.text()
 
-        if keyword not in self.search_word:
+        if keyword == "":
+            self.no_text_in_keyword()
+
+        elif keyword not in self.search_word and keyword != "":
             self.confirm_scrap_popup()
         else:
             while start_day >= end_day:
@@ -135,7 +147,8 @@ class Ui_EZ_Scrap(object):
             if self.confirm:
                 self.tw_crawler.search_tweets(keyword,start_day,end_day)
                 self.update_search_word()
-        self.get_tweets()
+        if keyword != "":
+            self.get_tweets()
 
     
     def set_grid_table(self,data):
@@ -154,9 +167,19 @@ class Ui_EZ_Scrap(object):
     
     def showItem(self):
         self.lineEdit.setText(self.listWidget.selectedItems()[0].text())
-        start_day = self.start_date.date().toPyDate() 
-        end_day = self.end_date.date().toPyDate()
-        
+        self.get_all_tweets()
+    
+    def get_all_tweets(self):
+        keyword = self.lineEdit.text()
+        file_list = os.listdir(f"./data/tweets/{keyword}")
+        df_list = []
+        for day in file_list:
+            df = pd.read_excel(f"./data/tweets/{keyword}/{day}",engine="openpyxl")
+            df_list.append(df)
+        tweets = pd.concat(df_list, ignore_index=True)
+        tweets = tweets.sort_values("post date")
+        self.set_grid_table(tweets)
+
     def get_tweets(self):
         start_day = self.start_date.date().toPyDate() 
         end_day = self.end_date.date().toPyDate()
