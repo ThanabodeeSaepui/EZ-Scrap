@@ -46,10 +46,12 @@ class Ui_EZ_Scrap(object):
         self.start_date.setGeometry(QtCore.QRect(330, 20, 110, 22))
         self.start_date.setObjectName("start_date")
         self.start_date.setDate(date.today())
+        self.start_date.setDisplayFormat("dd MMM yyyy")
         self.end_date = QtWidgets.QDateEdit(self.centralwidget)
         self.end_date.setGeometry(QtCore.QRect(330, 60, 110, 22))
         self.end_date.setObjectName("end_date")
         self.end_date.setDate(date.today() - timedelta(days=7))
+        self.end_date.setDisplayFormat("dd MMM yyyy")
         self.label = QtWidgets.QLabel(self.centralwidget)
         self.label.setGeometry(QtCore.QRect(220, 20, 101, 21))
         self.label.setFont(font)
@@ -60,6 +62,7 @@ class Ui_EZ_Scrap(object):
         self.listWidget = QtWidgets.QListWidget(self.centralwidget)
         self.listWidget.setGeometry(QtCore.QRect(10, 190, 201, 301))
         self.listWidget.setObjectName("listWidget")
+        self.listWidget.itemDoubleClicked.connect(self.showItem)
         self.label_3 = QtWidgets.QLabel(self.centralwidget)
         self.label_3.setGeometry(QtCore.QRect(10, 140, 141, 41))
         self.label_3.setFont(font)
@@ -148,7 +151,12 @@ class Ui_EZ_Scrap(object):
         self.table.setColumnWidth(3,120)
         self.table.setColumnWidth(4,1000)
         self.table.setColumnWidth(8,340)
-
+    
+    def showItem(self):
+        self.lineEdit.setText(self.listWidget.selectedItems()[0].text())
+        start_day = self.start_date.date().toPyDate() 
+        end_day = self.end_date.date().toPyDate()
+        
     def get_tweets(self):
         start_day = self.start_date.date().toPyDate() 
         end_day = self.end_date.date().toPyDate()
