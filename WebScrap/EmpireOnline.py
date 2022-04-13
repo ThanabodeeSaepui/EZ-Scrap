@@ -2,22 +2,27 @@ from utils import *
 
 def ScrapSite() -> dict:
     data = {}
+    data['web'] = {}
+    data['ref'] = Counter()
+
     def sub_fetch(session, url):
         with session.get(url, headers=headers) as response:
             if not response.ok:
                 return
             print(url)
+            domain = urlparse(url).netloc
             bs = BeautifulSoup(response.text, 'html.parser')
             bs = remove_unuse_tag(bs)
 
-            data[url] = {}
-            data[url]['title'] = bs.find('h1', {'class' : 'title'}).text
+            data['web'][url] = {}
+            data['web'][url]['title'] = bs.find('h1', {'class' : 'title'}).text
 
             content = ''
             section = bs.find('div', {'class' : 'article-content'})
             for p in section.find_all('p'):
                 content += f'{clean_html(p.text)} '
-            data[url]['content'] = content
+            data['web'][url]['content'] = content
+            data['ref'] += count_link_ref(bs, domain)
 
     def fetch(session, url):
         with session.get(url, headers=headers) as response:
@@ -33,7 +38,8 @@ def ScrapSite() -> dict:
                 for a in content.find_all('a'):
                     a = a.attrs['href']
                     news_link.add(f'https://{domain}/{a}')
-
+            data['ref'] += count_link_ref(bs, domain)
+            
             n = len(news_link)
             with ThreadPoolExecutor(max_workers=n) as executor:
                 with requests.Session() as session:

@@ -23,11 +23,15 @@ def remove_unuse_tag(bs : BeautifulSoup) -> BeautifulSoup:
                 s.extract()
     return bs
 
-def count_link_ref(bs : BeautifulSoup) -> Counter:
+def count_link_ref(bs : BeautifulSoup, current_domain : str) -> Counter:
     c = Counter()
     for a in bs.find_all('a'):
-        domain = urlparse(a.attrs['href']).netloc
-        c[domain] += 1
+        try:
+            domain = urlparse(a.attrs['href']).netloc
+            if (domain in default_domain) and (domain != current_domain):
+                c[domain] += 1
+        except KeyError:    # no href found
+            pass
     return c
 
 headers = {'User-Agent' : 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:88) Gecko/20100101 Firefox/88.0'}
