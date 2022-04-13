@@ -1,5 +1,5 @@
 import time
-from utils import *
+from .utils import *
 
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -62,6 +62,7 @@ def ScrapSite(driver_path='./SeleniumDriver/chromedriver.exe'):
         with requests.Session() as session:
             executor.map(fetch, [session]*n, urls)
             executor.shutdown(wait=True)
+    data['domain'] = 'screenrant.com'
     return data
 
 if __name__ == '__main__':

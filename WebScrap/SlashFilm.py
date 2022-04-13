@@ -1,4 +1,4 @@
-from utils import *
+from .utils import *
 
 def ScrapSite() -> dict:
     data = {}
@@ -44,6 +44,7 @@ def ScrapSite() -> dict:
         with requests.Session() as session:
             executor.map(fetch, [session]*n, pages_list)
             executor.shutdown(wait=True)
+    data['domain'] = 'www.slashfilm.com'
     return data
 
 

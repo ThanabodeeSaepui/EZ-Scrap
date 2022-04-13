@@ -1,11 +1,13 @@
 import os
 import re
 import json
+from typing import Counter
 from urllib.parse import urlparse
 from datetime import datetime, timedelta
 from concurrent.futures import ThreadPoolExecutor
 
 from WebScrap import clean_html, remove_unuse_tag
+from WebScrap import CBR, CinemaBlend, Collider, EmpireOnline, HollywoodReporter, Joblo, MovieNewsNet, MovieWeb, NME, RottenTomatoes, Screenrant, SlashFilm
 
 import requests
 import pandas as pd
@@ -18,24 +20,6 @@ from nltk.stem import PorterStemmer
 from textblob import TextBlob
 
 class WebCrawler():
-    non_scrap_domain = {
-        't.co',
-        'twitter.com',
-        'pinterest.com',
-        'www.reddit.com',
-        'youtu.be',
-        'www.youtube.com',
-        'instagram.com',
-        'www.instagram.com',
-        'www.facebook.com',
-        'www.tumblr.com',
-        'plus.google.com',
-        'www.fandango.com',
-        'support.google.com',
-        'www.vudu.com',
-        'www.entershanementreviews.com',
-        'twitch.tv'
-    }
     headers = {'User-Agent' : 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:88) Gecko/20100101 Firefox/88.0'}
     clean = re.compile('<.*?>')
 
@@ -127,7 +111,7 @@ class WebCrawler():
                     continue
                 
                 link_domain = urlparse(link).netloc
-                if (link_domain not in WebCrawler.non_scrap_domain) and (link_domain in self.start_link_domain):
+                if link_domain in self.start_link_domain:
                     LINK.add(link)
                     self.found_link.add(link)
 
@@ -182,7 +166,7 @@ class WebCrawler():
                     continue
 
                 link_domain = urlparse(link).netloc
-                if (link_domain not in WebCrawler.non_scrap_domain) and (link_domain in self.start_link_domain):
+                if link_domain in self.start_link_domain:
                     LINK.add(link)
                     self.found_link.add(link)
 
@@ -233,8 +217,25 @@ class WebCrawler():
                     if link_domain in self.metadata['link ref'].keys():
                         self.metadata['link ref'][link_domain] += 1
 
+    def default_scrap(self):
+        c = Counter()
+        for site in [CBR, CinemaBlend, Collider, EmpireOnline, HollywoodReporter, Joblo, MovieNewsNet, MovieWeb, NME, RottenTomatoes, Screenrant, SlashFilm]:
+            data = site.ScrapSite()
+            domain = data['domain']
+            c += data['ref']
+            self.metadata['link ref'] = c
+            self.save_default_scrap(data, domain)
+            self.save_metadata()
+    
+    def save_default_scrap(self, data, domain):
+        print(f"Saving to data : {domain}")
+        if not os.path.exists(f'./data/web-data/{domain}'):
+            os.mkdir(f'./data/web-data/{domain}')
+        with open(f"./data/web-data/{domain}/data.json", 'w', encoding="UTF-8") as outfile:
+            JSON = json.dumps(data, indent=4) 
+            outfile.write(JSON)
+
     def save_to_data(self, domain):
-        domain = urlparse(domain).netloc
         print(f"Saving to data : {domain}")
         if not os.path.exists(f'./data/web-data/{domain}'):
             os.mkdir(f'./data/web-data/{domain}')
@@ -470,3 +471,7 @@ def remove_url_th(txt):
 
 if not os.path.exists('./data'):
     os.mkdir('./data')
+
+if __name__ == '__main__':
+    WB = WebCrawler()
+    WB.default_scrap()
