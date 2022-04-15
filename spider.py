@@ -7,7 +7,9 @@ from datetime import datetime, timedelta
 from concurrent.futures import ThreadPoolExecutor
 
 from WebScrap import clean_html, remove_unuse_tag
-from WebScrap import CBR, CinemaBlend, Collider, EmpireOnline, HollywoodReporter, Joblo, MovieNewsNet, MovieWeb, NME, RottenTomatoes, Screenrant, SlashFilm
+from WebScrap import CBR, CinemaBlend, Collider, EmpireOnline, HollywoodReporter, IrishTimes,\
+                     Joblo, MovieNewsNet, MovieWeb, NME, RottenTomatoes, Sanook, Screenrant, SlashFilm,\
+                     TheWrap
 
 import requests
 import pandas as pd
@@ -46,12 +48,12 @@ class WebCrawler():
         if not os.path.exists('./data/metadata.json'):
             data = {'twitter-keyword' : {}, 'web-keyword' : [], 'web' : [], 'link ref': {}}
             with open('./data/metadata.json', 'w', encoding="UTF-8") as outfile:
-                JSON = json.dumps(data, indent=4)
+                JSON = json.dumps(data, indent=4, ensure_ascii=False)
                 outfile.write(JSON)
 
     def save_metadata(self):
         with open('./data/metadata.json', 'w' , encoding="UTF-8") as outfile:
-            JSON = json.dumps(self.metadata, indent=4)
+            JSON = json.dumps(self.metadata, indent=4, ensure_ascii=False)
             outfile.write(JSON)
 
     def load_metadata(self):
@@ -204,7 +206,9 @@ class WebCrawler():
 
     def default_scrap(self):
         c = Counter()
-        for site in [CBR, CinemaBlend, Collider, EmpireOnline, HollywoodReporter, Joblo, MovieNewsNet, MovieWeb, NME, RottenTomatoes, Screenrant, SlashFilm]:
+        for site in [CBR, CinemaBlend, Collider, EmpireOnline, HollywoodReporter, IrishTimes,\
+                     Joblo, MovieNewsNet, MovieWeb, NME, RottenTomatoes, Sanook, Screenrant, SlashFilm,\
+                     TheWrap]:
             data = site.ScrapSite()
             domain = data['domain']
             c += data['ref']
@@ -217,7 +221,7 @@ class WebCrawler():
         if not os.path.exists(f'./data/web-data/{domain}'):
             os.mkdir(f'./data/web-data/{domain}')
         with open(f"./data/web-data/{domain}/data.json", 'w', encoding="UTF-8") as outfile:
-            JSON = json.dumps(data, indent=4) 
+            JSON = json.dumps(data, indent=4, ensure_ascii=False) 
             outfile.write(JSON)
 
     def save_to_data(self, domain):
@@ -225,7 +229,7 @@ class WebCrawler():
         if not os.path.exists(f'./data/web-data/{domain}'):
             os.mkdir(f'./data/web-data/{domain}')
         with open(f"./data/web-data/{domain}/data.json", 'w', encoding="UTF-8") as outfile:
-            JSON = json.dumps(self.scrap_data[domain], indent=4) 
+            JSON = json.dumps(self.scrap_data[domain], indent=4, ensure_ascii=False) 
             outfile.write(JSON)
 
 
@@ -243,7 +247,7 @@ class TwitterCrawler():
         if not os.path.exists('./data/metadata.json'):
             data = {'twitter-keyword' : {}, 'web-keyword' : [], 'web' : [], 'link ref': {}}
             with open('./data/metadata.json', 'w', encoding="UTF-8") as outfile:
-                JSON = json.dumps(data, indent=4)
+                JSON = json.dumps(data, indent=4, ensure_ascii=False)
                 outfile.write(JSON)
         
     def load_metadata(self):
@@ -252,7 +256,7 @@ class TwitterCrawler():
 
     def save_metadata(self):
         with open('./data/metadata.json', 'w', encoding="UTF-8") as outfile:
-            JSON = json.dumps(self.metadata, indent=4)
+            JSON = json.dumps(self.metadata, indent=4, ensure_ascii=False)
             outfile.write(JSON)
 
 
