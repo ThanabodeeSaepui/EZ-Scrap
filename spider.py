@@ -26,25 +26,10 @@ class WebCrawler():
     def __init__(self):
         self.start_link = [
             'https://www.imdb.com/news/movie',
-            'https://editorial.rottentomatoes.com/news/',
-            'https://www.empireonline.com/movies/news/',
-            'https://collider.com/movie-news/',
-            'https://www.slashfilm.com/category/movies/',
-            'https://www.cinemablend.com/news',
-            'https://www.hollywoodreporter.com/c/movies/movie-news/',
-            'https://www.movienewsnet.com',
-            'https://www.nme.com/news/film',
-            'https://movieweb.com/movie-news/',
-            'https://www.cbr.com/category/movies/news-movies/',
-            'https://www.joblo.com/movie-news/',
             'https://www.bbc.com/news/topics/cg41ylwvgjyt/film',
             'https://www.nytimes.com/section/movies',
             'https://www.euronews.com/culture/see/cinema',
-            'https://www.thewrap.com/category/movies/',
-            'https://www.irishtimes.com/culture/film',
             'https://wegotthiscovered.com/movies/',
-            'https://www.rollingstone.com/movies/movie-news/',
-            'https://screenrant.com/movie-news/'
             ]
         self.start_link_domain = [urlparse(link).netloc for link in self.start_link]
 

@@ -36,8 +36,7 @@ def ScrapSite() -> dict:
             news = bs.find('div', {'class' : 'content'})
             for article in news.find_all('article'):
                 a = article.find('h3').find('a').attrs['href']
-                print(f'{a}')
-                news_link.append(f'{a}')
+                news_link.append(a)
             data['ref'] += count_link_ref(bs, domain)
             n = len(news_link)
 
