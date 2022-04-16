@@ -7,8 +7,6 @@ from urllib.parse import urlparse
 from datetime import datetime, timedelta
 from concurrent.futures import ThreadPoolExecutor
 
-from pendulum import today
-
 from WebScrap import clean_html, remove_unuse_tag
 from WebScrap import CBR, CinemaBlend, Collider, EmpireOnline, HollywoodReporter, IrishTimes,\
                      Joblo, Movie2News, MovieNewsNet, MovieWeb, NME, RottenTomatoes, Sanook, \
@@ -320,6 +318,8 @@ class TwitterCrawler():
                     continue
                 except StopIteration:
                     break
+            if len(tweets) == 0:
+                continue
             
             users_locs = []
             if use_lan == "en":
