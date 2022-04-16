@@ -1,4 +1,5 @@
 import re
+import os
 import json
 from collections import Counter
 from urllib.parse import urlparse
@@ -33,6 +34,29 @@ def count_link_ref(bs : BeautifulSoup, current_domain : str) -> Counter:
         except KeyError:    # no href found
             pass
     return c
+
+def get_data(domain : str) -> dict:
+    if os.path.exists(f'./data/web-data/{domain}/data.json'):
+        data = open(f'./data/web-data/{domain}/data.json', encoding="UTF-8")
+        data = json.load(data)
+        return data
+    else:
+        return {}
+        
+def get_metadata(domain : str) -> dict:
+    if os.path.exists(f'./data/web-data/{domain}/metadata.json'):
+        metadata = open(f'./data/web-data/{domain}/metadata.json', encoding="UTF-8")
+        metadata = json.load(metadata)
+        metadata['ref'] = Counter(metadata['ref'])
+        metadata['web'] = set(metadata['web'])
+        return metadata
+    else:
+        metadata = {
+            'domain' : domain,
+            'ref' : Counter(),
+            'web' : set()
+        }
+        return metadata
 
 headers = {'User-Agent' : 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:88) Gecko/20100101 Firefox/88.0'}
 

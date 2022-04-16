@@ -2,13 +2,16 @@ from .utils import *
 
 def ScrapSite() -> dict:
     data = {}
-    data['web'] = {}
-    data['ref'] = Counter()
+    data['data'] = get_data('www.irishtimes.com')
+    data['metadata'] = get_metadata('www.irishtimes.com')
 
     def sub_fetch(session, url):
+        if url in data['metadata']['web']:
+            return
         with session.get(url, headers=headers) as response:
             if not response.ok:
                 return
+            data['metadata']['web'].add(url)
             print(url)
             domain = urlparse(url).netloc
             bs = BeautifulSoup(response.text, 'html.parser')
@@ -20,10 +23,10 @@ def ScrapSite() -> dict:
                 content += f'{clean_html(p.text)} '
             if content == 'If you are reading this on the Irish Times app, click here to play. ':
                 return
-            data['web'][url] = {}
-            data['web'][url]['title'] = bs.find('h1').text
-            data['web'][url]['content'] = content
-            data['ref'] += count_link_ref(bs, domain)
+            data['data'][url] = {}
+            data['data'][url]['title'] = bs.find('h1').text
+            data['data'][url]['content'] = content
+            data['metadata']['ref'] += count_link_ref(bs, domain)
 
     def fetch(session, url):
         with session.get(url, headers=headers) as response:
@@ -37,9 +40,8 @@ def ScrapSite() -> dict:
             news = bs.find('div', {'class' : 'sectionteaser'})
             for article in news.find_all('div', {'class': 'story'}):
                 a = article.find('a').attrs['href']
-                print(f'https://{domain}/{a}')
                 news_link.append(f'https://{domain}/{a}')
-            data['ref'] += count_link_ref(bs, domain)
+            data['metadata']['ref'] += count_link_ref(bs, domain)
             n = len(news_link)
 
             with ThreadPoolExecutor(max_workers=n) as executor:
@@ -54,7 +56,6 @@ def ScrapSite() -> dict:
         with requests.Session() as session:
             executor.map(fetch, [session]*n, pages_list)
             executor.shutdown(wait=True)
-    data['domain'] = 'www.irishtimes.com'
     return data
 
 

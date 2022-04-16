@@ -2,27 +2,30 @@ from .utils import *
 
 def ScrapSite() -> dict:
     data = {}
-    data['web'] = {}
-    data['ref'] = Counter()
+    data['data'] = get_data('www.cbr.com')
+    data['metadata'] = get_metadata('www.cbr.com')
 
     def sub_fetch(session, url):
+        if url in data['metadata']['web']:
+            return
         with session.get(url, headers=headers) as response:
             if not response.ok:
                 return
+            data['metadata']['web'].add(url)
             print(url)
             domain = urlparse(url).netloc
             bs = BeautifulSoup(response.text, 'html.parser')
             bs = remove_unuse_tag(bs)
 
-            data['web'][url] = {}
-            data['web'][url]['title'] = bs.find('h1', {'class' : 'heading_title'}).text
+            data['data'][url] = {}
+            data['data'][url]['title'] = bs.find('h1', {'class' : 'heading_title'}).text
 
             content = ''
             section = bs.find('section', {'class' : 'article-body'})
             for p in section.find_all('p'):
                 content += f'{clean_html(p.text)} '
-            data['web'][url]['content'] = content
-            data['ref'] += count_link_ref(bs, domain)
+            data['data'][url]['content'] = content
+            data['metadata']['ref'] += count_link_ref(bs, domain)
 
     def fetch(session, url):
         with session.get(url, headers=headers) as response:
@@ -36,9 +39,8 @@ def ScrapSite() -> dict:
             news = bs.find('section', {'class' : 'listing-content'})
             for article in news.find_all('article'):
                 a = article.find('a').attrs['href']
-                print(f'https://{domain}/{a}')
                 news_link.append(f'https://{domain}/{a}')
-            data['ref'] += count_link_ref(bs, domain)
+            data['metadata']['ref'] += count_link_ref(bs, domain)
 
             n = len(news_link)
             with ThreadPoolExecutor(max_workers=n) as executor:
@@ -53,7 +55,6 @@ def ScrapSite() -> dict:
         with requests.Session() as session:
             executor.map(fetch, [session]*n, pages_list)
             executor.shutdown(wait=True)
-    data['domain'] = 'www.cbr.com'
     return data
 
 

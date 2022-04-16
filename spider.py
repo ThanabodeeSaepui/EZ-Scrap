@@ -1,15 +1,15 @@
 import os
 import re
 import json
-from typing import Counter
+from collections import Counter
 from urllib.parse import urlparse
 from datetime import datetime, timedelta
 from concurrent.futures import ThreadPoolExecutor
 
 from WebScrap import clean_html, remove_unuse_tag
 from WebScrap import CBR, CinemaBlend, Collider, EmpireOnline, HollywoodReporter, IrishTimes,\
-                     Joblo, MovieNewsNet, MovieWeb, NME, RottenTomatoes, Sanook, Screenrant, SlashFilm,\
-                     TheWrap
+                     Joblo, Movie2News, MovieNewsNet, MovieWeb, NME, RottenTomatoes, Sanook, \
+                     Screenrant, SlashFilm, TheWrap
 
 import requests
 import pandas as pd
@@ -207,21 +207,25 @@ class WebCrawler():
     def default_scrap(self):
         c = Counter()
         for site in [CBR, CinemaBlend, Collider, EmpireOnline, HollywoodReporter, IrishTimes,\
-                     Joblo, MovieNewsNet, MovieWeb, NME, RottenTomatoes, Sanook, Screenrant, SlashFilm,\
-                     TheWrap]:
+                     Joblo, Movie2News, MovieNewsNet, MovieWeb, NME, RottenTomatoes, Sanook, \
+                     Screenrant, SlashFilm, TheWrap]:
             data = site.ScrapSite()
-            domain = data['domain']
-            c += data['ref']
+            domain = data['metadata']['domain']
+            c += data['metadata']['ref']
             self.metadata['link ref'] = c
             self.save_default_scrap(data, domain)
             self.save_metadata()
     
     def save_default_scrap(self, data, domain):
+        data['metadata']['web'] = list(data['metadata']['web'])
         print(f"Saving to data : {domain}")
         if not os.path.exists(f'./data/web-data/{domain}'):
             os.mkdir(f'./data/web-data/{domain}')
         with open(f"./data/web-data/{domain}/data.json", 'w', encoding="UTF-8") as outfile:
-            JSON = json.dumps(data, indent=4, ensure_ascii=False) 
+            JSON = json.dumps(data['data'], indent=4, ensure_ascii=False) 
+            outfile.write(JSON)
+        with open(f"./data/web-data/{domain}/metadata.json", 'w', encoding="UTF-8") as outfile:
+            JSON = json.dumps(data['metadata'], indent=4, ensure_ascii=False) 
             outfile.write(JSON)
 
     def save_to_data(self, domain):

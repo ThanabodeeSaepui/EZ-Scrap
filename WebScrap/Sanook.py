@@ -8,8 +8,8 @@ from selenium.webdriver.support import expected_conditions as EC
 
 def ScrapSite(driver_path='./SeleniumDriver/chromedriver.exe'):
     data = {}
-    data['web'] = {}
-    data['ref'] = Counter()
+    data['data'] = get_data('www.sanook.com')
+    data['metadata'] = get_metadata('www.sanook.com')
 
     def get_article_urls() -> list:
         driver = webdriver.Chrome(driver_path)
@@ -38,23 +38,26 @@ def ScrapSite(driver_path='./SeleniumDriver/chromedriver.exe'):
         return urls
 
     def fetch(session, url):
+        if url in data['metadata']['web']:
+            return
         with session.get(url, headers=headers) as response:
             if not response.ok:
                 return
+            data['metadata']['web'].add(url)
             print(url)
             domain = urlparse(url).netloc
             bs = BeautifulSoup(response.text, 'html.parser')
             bs = remove_unuse_tag(bs)
 
-            data['web'][url] = {}
-            data['web'][url]['title'] = bs.find('h1').text
+            data['data'][url] = {}
+            data['data'][url]['title'] = bs.find('h1').text
 
             content = ''
             section = bs.find('div', {'class' : 'EntryReaderInner'})
             for p in section.find_all('p'):
                 content += f'{clean_html(p.text)} '
-            data['web'][url]['content'] = content
-            data['ref'] += count_link_ref(bs, domain)
+            data['data'][url]['content'] = content
+            data['metadata']['ref'] += count_link_ref(bs, domain)
 
     urls = get_article_urls()
     n = len(urls)
@@ -62,7 +65,6 @@ def ScrapSite(driver_path='./SeleniumDriver/chromedriver.exe'):
         with requests.Session() as session:
             executor.map(fetch, [session]*n, urls)
             executor.shutdown(wait=True)
-    data['domain'] = 'www.sanook.com'
     return data
 
 if __name__ == '__main__':
