@@ -285,12 +285,14 @@ class TwitterCrawler():
         reg = re.compile(r'[a-zA-Z]')
         if reg.match(keyword.replace("#","")):
             use_lan = "en"
+            hashtag_pattern = re.compile(r"#[a-zA-Z']+")
         else:
             use_lan = "th"
+            hashtag_pattern = re.compile(r"#[\u0E00-\u0E7Fa-zA-Z']+")
         if not os.path.exists(f"./data/tweets/{keyword}"):  # create dir for new keyword if not exist
             os.makedirs(f"./data/tweets/{keyword}")
         api = self.connect()
-        while start_day >= end_day:
+        while start_day >= end_day: 
             until_day = datetime.strftime(start_day + timedelta(1), '%Y-%m-%d')
             day = datetime.strftime(start_day, '%Y-%m-%d')
             yesterday = (start_day - timedelta(1))
@@ -301,7 +303,8 @@ class TwitterCrawler():
             tweets = tw.Cursor(api.search_tweets, 
                         q=f"{keyword} -filter:retweets",
                         lang=use_lan,
-                        until=until_day).items(900)
+                        until=until_day, 
+                        tweet_mode="extended").items(900)
 
             # use set to remove duplicate tweet
             tweets_set = set()
@@ -313,23 +316,27 @@ class TwitterCrawler():
             users_locs = []
             for tweet in tweets:
                 if use_lan == "en":
-                    tweet_sen = sentiment(TextBlob(stem(cleanText(tweet.text))))
+                    hashtag = re.findall(hashtag_pattern, tweet.full_text)
+                    tweet_sen = sentiment(TextBlob(stem(cleanText(tweet.full_text))))
                 else:
                     try:
-                        tweet_sen = sentiment_th(cleanText_th(tweet.text))
+                        hashtag = re.findall(hashtag_pattern, cleanText_th(tweet.full_text))
+                        tweet_sen = sentiment_th(cleanText_th(tweet.full_text))
                     except:
                         continue
 
                 if tweet.created_at.replace(tzinfo=None).date() > yesterday:
+                    text = re.sub(hashtag_pattern,"", tweet.full_text)
                     print(f"https://twitter.com/twitter/statuses/{tweet.id}")
                     locs = [
                         keyword,
                         tweet.user.screen_name,
                         tweet.user.location if tweet.user.location != '' else 'unknown',
                         tweet.created_at.replace(tzinfo=None),
-                        remove_url(tweet.text) if use_lan == "en" else remove_url_th(tweet.text),
+                        remove_url(text) if use_lan == "en" else remove_url_th(text),
                         tweet.favorite_count,
                         tweet.retweet_count,
+                        hashtag,
                         tweet_sen,
                         f"https://twitter.com/twitter/statuses/{tweet.id}"]
                     users_locs.append(locs)
@@ -337,7 +344,7 @@ class TwitterCrawler():
                 continue
 
             tweet_text = pd.DataFrame(data=users_locs, 
-                columns=['keyword','user','location','post date','tweet', 'favorite count', 'retweet count','sentiment','tweet link'])
+                columns=['keyword','user','location','post date','tweet', 'favorite count', 'retweet count','hashtag','sentiment','tweet link'])
             tweet_text = tweet_text.sort_values('post date', ascending=True).reset_index(drop=True)     # sort by datetime
 
             # save to excel
