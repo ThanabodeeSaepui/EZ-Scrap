@@ -10,10 +10,12 @@
                 "2022-04-09",
                 "2022-04-08",
                 "2022-04-10",
+                "2022-04-11",
                 "2022-04-07",
                 "2022-04-06",
                 "2022-04-05",
                 "2022-04-04",
+                "2022-04-16",
                 "2022-04-15"
             ]
         },
@@ -42,25 +44,15 @@
     },
     "web-keyword": [],
     "link ref": {
-        "www.imdb.com": 21,
-        "editorial.rottentomatoes.com": 2,
-        "www.empireonline.com": 0,
-        "collider.com": 5,
-        "www.slashfilm.com": 8,
-        "www.cinemablend.com": 3,
-        "www.hollywoodreporter.com": 37,
-        "www.movienewsnet.com": 0,
-        "www.nme.com": 2,
-        "movieweb.com": 1,
-        "www.cbr.com": 1,
-        "www.joblo.com": 0,
-        "www.bbc.com": 2,
-        "www.nytimes.com": 19,
-        "www.euronews.com": 0,
-        "www.thewrap.com": 5,
-        "www.irishtimes.com": 0,
-        "wegotthiscovered.com": 0,
-        "www.rollingstone.com": 2,
-        "screenrant.com": 3
+        "screenrant.com": 240,
+        "www.hollywoodreporter.com": 40,
+        "www.nytimes.com": 5,
+        "www.thewrap.com": 10,
+        "www.rollingstone.com": 10,
+        "collider.com": 10,
+        "www.empireonline.com": 12,
+        "www.slashfilm.com": 2,
+        "www.imdb.com": 6,
+        "www.nme.com": 1
     }
 }

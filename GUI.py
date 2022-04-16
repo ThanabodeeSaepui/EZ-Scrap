@@ -155,6 +155,7 @@ class Ui_EZ_Scrap(object):
         start_day = self.start_date.date().toPyDate() 
         end_day = self.end_date.date().toPyDate()
         keyword = self.lineEdit.text()
+        exist = False
 
         if keyword == "":
             self.no_text_in_keyword()
@@ -162,17 +163,17 @@ class Ui_EZ_Scrap(object):
         elif keyword not in self.search_word and keyword != "":
             self.confirm_scrap_popup()
         else:
+            exist = True
             while start_day >= end_day:
                 if start_day.strftime('%Y-%m-%d') not in self.tw_crawler.metadata['twitter-keyword'][keyword]['date']:
+                    exist = False
                     self.confirm_date_scrap_popup(start_day,end_day)
                     break
                 start_day -= timedelta(1)
         if self.confirm:
             self.tw_crawler.search_tweets(keyword,start_day,end_day)
             self.update_search_word()
-        else:
-            return
-        if keyword != "":
+        if exist:
             self.get_tweets()
 
     

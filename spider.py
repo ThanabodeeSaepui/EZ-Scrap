@@ -1,10 +1,13 @@
 import os
 import re
 import json
+import time
 from collections import Counter
 from urllib.parse import urlparse
 from datetime import datetime, timedelta
 from concurrent.futures import ThreadPoolExecutor
+
+from pendulum import today
 
 from WebScrap import clean_html, remove_unuse_tag
 from WebScrap import CBR, CinemaBlend, Collider, EmpireOnline, HollywoodReporter, IrishTimes,\
@@ -275,7 +278,7 @@ class TwitterCrawler():
         try:
             auth = tw.OAuthHandler(consumer_key, consumer_secret)
             auth.set_access_token(access_token, access_token_secret)
-            api = tw.API(auth)
+            api = tw.API(auth,wait_on_rate_limit=True)
             return api
         except:
             print("Error")
@@ -292,40 +295,37 @@ class TwitterCrawler():
         if not os.path.exists(f"./data/tweets/{keyword}"):  # create dir for new keyword if not exist
             os.makedirs(f"./data/tweets/{keyword}")
         api = self.connect()
-        while start_day >= end_day: 
+        while start_day >= end_day:
             until_day = datetime.strftime(start_day + timedelta(1), '%Y-%m-%d')
             day = datetime.strftime(start_day, '%Y-%m-%d')
-            yesterday = (start_day - timedelta(1))
-            if keyword not  in self.metadata['twitter-keyword'].keys():
+            if keyword not in self.metadata['twitter-keyword'].keys():
                 self.metadata['twitter-keyword'][keyword] = {'date' : []}
             if day in self.metadata['twitter-keyword'][keyword]['date']:
                 continue
-            tweets = tw.Cursor(api.search_tweets, 
+            c = tw.Cursor(api.search_tweets, 
                         q=f"{keyword} -filter:retweets",
                         lang=use_lan,
                         until=until_day, 
-                        tweet_mode="extended").items(900)
-
-            # use set to remove duplicate tweet
-            tweets_set = set()
-            for tweet in tweets:
-                tweets_set.add(tweet)
-            tweets = list(tweets_set)
-
-            # convert to dataframe
+                        tweet_mode="extended",
+                        include_entities=True).items()
+            tweets = []
+            while True:
+                try:
+                    tweet = c.next()
+                    if tweet.created_at.replace(tzinfo=None).date() != start_day:
+                        break
+                    tweets.append(tweet)
+                except tw.TweepError:
+                    time.sleep(60 * 15)
+                    continue
+                except StopIteration:
+                    break
+            
             users_locs = []
-            for tweet in tweets:
-                if use_lan == "en":
+            if use_lan == "en":
+                for tweet in tweets:
                     hashtag = re.findall(hashtag_pattern, tweet.full_text)
                     tweet_sen = sentiment(TextBlob(stem(cleanText(tweet.full_text))))
-                else:
-                    try:
-                        hashtag = re.findall(hashtag_pattern, cleanText_th(tweet.full_text))
-                        tweet_sen = sentiment_th(cleanText_th(tweet.full_text))
-                    except:
-                        continue
-
-                if tweet.created_at.replace(tzinfo=None).date() > yesterday:
                     text = re.sub(hashtag_pattern,"", tweet.full_text)
                     print(f"https://twitter.com/twitter/statuses/{tweet.id}")
                     locs = [
@@ -340,6 +340,29 @@ class TwitterCrawler():
                         tweet_sen,
                         f"https://twitter.com/twitter/statuses/{tweet.id}"]
                     users_locs.append(locs)
+            else:
+                tweet_text_list = []
+                for tweet in tweets:
+                    tweet_text_list.append(tweet.full_text)
+                clean_text = cleanText_th(tweet_text_list)
+                sentiment_list = sentiment_th(clean_text)
+                for tweet, text, sent in zip(tweets, clean_text, sentiment_list):
+                    hashtag = re.findall(hashtag_pattern, text)
+                    text = re.sub(hashtag_pattern,"", tweet.full_text)
+                    print(f"https://twitter.com/twitter/statuses/{tweet.id}")
+                    locs = [
+                        keyword,
+                        tweet.user.screen_name,
+                        tweet.user.location if tweet.user.location != '' else 'unknown',
+                        tweet.created_at.replace(tzinfo=None),
+                        text,
+                        tweet.favorite_count,
+                        tweet.retweet_count,
+                        hashtag,
+                        sent,
+                        f"https://twitter.com/twitter/statuses/{tweet.id}"]
+                    users_locs.append(locs)      
+
             if len(users_locs) == 0:
                 continue
 
@@ -374,24 +397,6 @@ def cleanText(text):
     text = ' '.join(text)
     return text
 
-def cleanText_th(text):
-
-    text = re.sub('http://\S+|https://\S+', '', text) # remove url
-
-
-    url = "https://api.aiforthai.in.th/textcleansing" #api for remove emoji
-    
-    params = {f'text':{text}}
-    
-    
-    headers = {
-        'Apikey': "fIwWRjuLjs8KrK8BcA7kaj5das47eZpH",
-        }
-    
-    response = requests.request("GET", url, headers=headers, params=params)
-    
-    return response.json()['cleansing_text']
-
 def word_tokenize_th(text):
     url ='https://api.aiforthai.in.th/lextoplus'
 
@@ -421,20 +426,56 @@ def sentiment(cleaned_text):
     else:
         return 'neutral'
 
-def sentiment_th(clean_text):
+def cleanText_th(tweet_text : list) -> list:
+    def get_cleantext(text : str,index : int):
 
-    url = "https://api.aiforthai.in.th/ssense"
-    params = {'text':clean_text}
-    headers = {
-        'Apikey': "fIwWRjuLjs8KrK8BcA7kaj5das47eZpH"
-        }
-    response = requests.get(url, headers=headers, params=params)
-    polarity = eval(response.text.replace("false","False").replace("true","True"))['sentiment']['polarity']
+        text = re.sub('http://\S+|https://\S+', '', text) # remove url
 
-    if polarity == '':
-        polarity = "neutral"
+
+        url = "https://api.aiforthai.in.th/textcleansing" #api for remove emoji
+        
+        params = {f'text':{text}}
+        
+        
+        headers = {
+            'Apikey': "fIwWRjuLjs8KrK8BcA7kaj5das47eZpH",
+            }
+        
+        response = requests.request("GET", url, headers=headers, params=params)
+        cleantext[index] = response.json()['cleansing_text']
+
+    n = len(tweet_text)
+    cleantext = [None] * n
+    with ThreadPoolExecutor(max_workers=n) as executor:
+        executor.map(get_cleantext, tweet_text, list(range(n)))
+        executor.shutdown(wait=True)
     
-    return polarity
+    
+    return cleantext
+    
+def sentiment_th(tweet_text : list) -> list:
+    def get_sentiment(text : str, index : int):
+
+        url = "https://api.aiforthai.in.th/ssense"
+        params = {'text':text}
+        headers = {
+            'Apikey': "fIwWRjuLjs8KrK8BcA7kaj5das47eZpH"
+        }
+        response = requests.get(url, headers=headers, params=params)
+
+        if response.json()['sentiment']['polarity'] == '':
+            polarity = "neutral"
+        else:
+            polarity = response.json()['sentiment']['polarity']
+        sentiment[index] = polarity
+
+    n = len(tweet_text)
+    sentiment = [None] * n
+    with ThreadPoolExecutor(max_workers=n) as executor:
+        executor.map(get_sentiment, tweet_text, list(range(n)))
+        executor.shutdown(wait=True)
+
+    return sentiment
 
 
 def remove_url(txt):
