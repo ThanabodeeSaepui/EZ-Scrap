@@ -2,8 +2,8 @@ from .utils import *
 
 def ScrapSite() -> dict:
     data = {}
-    data['data'] = get_data('www.cinemablend.com')
-    data['metadata'] = get_metadata('www.cinemablend.com')
+    data['data'] = get_data('www.nme.com')
+    data['metadata'] = get_metadata('www.nme.com')
 
     def sub_fetch(session, url):
         if url in data['metadata']['web']:

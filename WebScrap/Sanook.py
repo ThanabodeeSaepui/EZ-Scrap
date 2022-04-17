@@ -26,7 +26,7 @@ def ScrapSite(driver_path='./SeleniumDriver/chromedriver.exe'):
             )
             articles = section.find_elements(By.XPATH, '//article')
             article_count[1] = len(articles)
-            if article_count[0] == article_count[1]:
+            if (article_count[0] == article_count[1]) or (len(articles) >= 150):
                 break
             else:
                 article_count[0] = article_count[1]

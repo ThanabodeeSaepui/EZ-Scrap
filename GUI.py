@@ -14,6 +14,10 @@ from spider import *
 
 class Ui_EZ_Scrap(object):
     def setupUi(self, EZ_Scrap):
+
+        self.tw_crawler = TwitterCrawler()
+        self.web_crawler = WebCrawler()
+
         font = QtGui.QFont()
         font.setPointSize(14)
         EZ_Scrap.setObjectName("EZ_Scrap")
@@ -82,10 +86,12 @@ class Ui_EZ_Scrap(object):
         self.scrap_bt.setGeometry(QtCore.QRect(280, 0, 81, 51))
         self.scrap_bt.setFont(font)
         self.scrap_bt.setObjectName("scrap_bt")
-        self.scrap_bt_2 = QtWidgets.QPushButton(self.tab_2)
-        self.scrap_bt_2.setGeometry(QtCore.QRect(10, 0, 211, 51))
-        self.scrap_bt_2.setFont(font)
-        self.scrap_bt_2.setObjectName("scrap_bt_2")
+        self.scrap_bt.clicked.connect(self.web_crawler.default_scrap)
+        self.select_driver_bt = QtWidgets.QPushButton(self.tab_2)
+        self.select_driver_bt.setGeometry(QtCore.QRect(10, 0, 211, 51))
+        self.select_driver_bt.setFont(font)
+        self.select_driver_bt.setObjectName("select_driver_bt")
+        self.select_driver_bt.clicked.connect(self.file_selected)
         self.tabWidget.addTab(self.tab_2, "")
         EZ_Scrap.setCentralWidget(self.centralwidget)
 
@@ -93,7 +99,6 @@ class Ui_EZ_Scrap(object):
         QtCore.QMetaObject.connectSlotsByName(EZ_Scrap)
 
         self.update_search_word()
-        self.tw_crawler = TwitterCrawler()
 
         self.confirm = False
 
@@ -107,7 +112,7 @@ class Ui_EZ_Scrap(object):
         self.label_3.setText(_translate("EZ_Scrap", "Search Word"))
         self.search_bt_2.setText(_translate("EZ_Scrap", "Search"))
         self.scrap_bt.setText(_translate("EZ_Scrap", "Scrap"))
-        self.scrap_bt_2.setText(_translate("EZ_Scrap", "Select Driver"))
+        self.select_driver_bt.setText(_translate("EZ_Scrap", "Select Driver"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab), _translate("EZ_Scrap", "Twitter"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_2), _translate("EZ_Scrap", "Website"))
 
@@ -222,7 +227,12 @@ class Ui_EZ_Scrap(object):
         tweets = pd.concat(df_list, ignore_index=True)
         tweets = tweets.sort_values("post date")
         self.set_grid_table(tweets)
-    
+
+    def file_selected(self):
+        options = QtWidgets.QFileDialog.Options()
+        options |= QtWidgets.QFileDialog.DontUseNativeDialog
+        file_path = QtWidgets.QFileDialog.getOpenFileName()
+        self.web_crawler.set_selenium_webdriver(file_path[0])
 
 if __name__ == "__main__":
     import sys

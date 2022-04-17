@@ -47,7 +47,7 @@ class WebCrawler():
         if not os.path.exists("./data/web-data"):
             os.mkdir("./data/web-data")
         if not os.path.exists('./data/metadata.json'):
-            data = {'twitter-keyword' : {}, 'web-keyword' : [], 'web' : [], 'link ref': {}}
+            data = {'twitter-keyword' : {}, 'web-keyword' : [], 'webdriver path : '', link ref': {}}
             with open('./data/metadata.json', 'w', encoding="UTF-8") as outfile:
                 JSON = json.dumps(data, indent=4, ensure_ascii=False)
                 outfile.write(JSON)
@@ -65,6 +65,10 @@ class WebCrawler():
         self.metadata['link ref'] = {}
         for domain in self.start_link_domain:
             self.metadata['link ref'][domain] = 0
+
+    def set_selenium_webdriver(self, PATH):
+        self.metadata['webdriver path'] = PATH
+        self.save_metadata()
 
     def scrap(self):
         self.reset_link_ref()
@@ -208,9 +212,24 @@ class WebCrawler():
     def default_scrap(self):
         c = Counter()
         for site in [CBR, CinemaBlend, Collider, EmpireOnline, HollywoodReporter, IrishTimes,\
-                     Joblo, Movie2News, MovieNewsNet, MovieWeb, NME, RottenTomatoes, Sanook, \
-                     Screenrant, SlashFilm, TheWrap]:
+                     Joblo, Movie2News, MovieNewsNet, MovieWeb, NME, RottenTomatoes, \
+                     SlashFilm, TheWrap]:
             data = site.ScrapSite()
+            domain = data['metadata']['domain']
+            c += data['metadata']['ref']
+            self.metadata['link ref'] = c
+            self.save_default_scrap(data, domain)
+            self.save_metadata()
+
+        PATH = self.metadata['webdriver path']
+        for site in [Sanook, Screenrant]:
+            if PATH != "":
+                data = site.ScrapSite(PATH)
+            else:
+                try:
+                    data = site.ScrapSite()
+                except:
+                    return
             domain = data['metadata']['domain']
             c += data['metadata']['ref']
             self.metadata['link ref'] = c
@@ -250,7 +269,7 @@ class TwitterCrawler():
         if not os.path.exists(f"./data/tweets/"): 
             os.mkdir(f"./data/tweets/")
         if not os.path.exists('./data/metadata.json'):
-            data = {'twitter-keyword' : {}, 'web-keyword' : [], 'web' : [], 'link ref': {}}
+            data = {'twitter-keyword' : {}, 'web-keyword' : [], 'webdriver path' : '', 'link ref': {}}
             with open('./data/metadata.json', 'w', encoding="UTF-8") as outfile:
                 JSON = json.dumps(data, indent=4, ensure_ascii=False)
                 outfile.write(JSON)

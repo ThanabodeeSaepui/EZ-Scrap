@@ -63,22 +63,18 @@ headers = {'User-Agent' : 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:88) Geck
 default_domain = [
     'collider.com',
     'editorial.rottentomatoes.com',
+    'movie2news.com',
     'movieweb.com',
     'screenrant.com',
-    'wegotthiscovered.com',
-    'www.bbc.com',
     'www.cbr.com',
     'www.cinemablend.com',
     'www.empireonline.com',
-    'www.euronews.com',
     'www.hollywoodreporter.com',
-    'www.imdb.com',
     'www.irishtimes.com',
     'www.joblo.com',
     'www.movienewsnet.com',
-    'www.nme.com',
-    'www.nytimes.com',
-    'www.rollingstone.com',
+    'www.nme.com'
+    'www.sanook.com',
     'www.slashfilm.com',
     'www.thewrap.com'
 ]

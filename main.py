@@ -3,8 +3,6 @@ from GUI import *
 import sys
 
 if __name__ == '__main__':
-    # webcrawler = WebCrawler()
-    # webcrawler.scrap()
 
     app = QtWidgets.QApplication(sys.argv)
     EZ_Scrap = QtWidgets.QMainWindow()

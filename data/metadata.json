@@ -53,15 +53,23 @@
     },
     "web-keyword": [],
     "link ref": {
-        "screenrant.com": 240,
-        "www.hollywoodreporter.com": 40,
-        "www.nytimes.com": 5,
-        "www.thewrap.com": 10,
-        "www.rollingstone.com": 10,
-        "collider.com": 10,
-        "www.empireonline.com": 12,
-        "www.slashfilm.com": 2,
-        "www.imdb.com": 6,
-        "www.nme.com": 1
-    }
+        "screenrant.com": 820,
+        "www.hollywoodreporter.com": 178,
+        "www.nytimes.com": 26,
+        "www.thewrap.com": 35,
+        "www.rollingstone.com": 164,
+        "collider.com": 63,
+        "www.empireonline.com": 75,
+        "www.slashfilm.com": 5,
+        "www.imdb.com": 18,
+        "www.nme.com": 3,
+        "www.cinemablend.com": 12,
+        "www.cbr.com": 268,
+        "www.bbc.com": 4,
+        "wegotthiscovered.com": 3,
+        "editorial.rottentomatoes.com": 2,
+        "movieweb.com": 12,
+        "www.joblo.com": 1
+    },
+    "webdriver path": ""
 }
