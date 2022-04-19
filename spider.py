@@ -411,7 +411,7 @@ def cleanText(text):
 
     # Removes stop words that have no use in sentiment analysis 
     text_tokens = word_tokenize(text)
-    text = [word for word in text_tokens if not word in stopwords.words()]
+    text = [word for word in text_tokens if not word in stopwords.words("english")]
 
     text = ' '.join(text)
     return text
@@ -445,6 +445,7 @@ def sentiment(cleaned_text):
     else:
         return 'neutral'
 
+
 def cleanText_th(tweet_text : list) -> list:
     def get_cleantext(text : str,index : int):
 
@@ -471,6 +472,10 @@ def cleanText_th(tweet_text : list) -> list:
     
     
     return cleantext
+
+def sentiment_en(text : str) -> str:
+    SENTIMENT = sentiment(TextBlob(stem(cleanText(text))))
+    return SENTIMENT
     
 def sentiment_th(tweet_text : list) -> list:
     def get_sentiment(text : str, index : int):

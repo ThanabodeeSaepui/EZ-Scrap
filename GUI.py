@@ -11,6 +11,31 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from datetime import date
 from spider import *
 
+class TweetWorker(QtCore.QThread):
+    def __init__(self, keyword,startday,endday,tw_crawler):
+        QtCore.QThread.__init__(self)
+        self.keyword , self.start_day, self.end_day = keyword , startday , endday
+        self.tw_crawler = tw_crawler
+    # progress = QtCore.pyqtSignal()
+    # finished = QtCore.pyqtSignal()
+
+    def run(self):
+        self.tw_crawler.search_tweets(self.keyword,self.start_day,self.end_day)
+        # self.progress.emit()
+        # self.finished.emit()
+
+class WebWorker(QtCore.QThread):
+    def __init__(self,web_crawler):
+        QtCore.QThread.__init__(self)
+        self.web_crawler = web_crawler
+    # progress = QtCore.pyqtSignal()
+    # finished = QtCore.pyqtSignal()
+
+    def run(self):
+        self.web_crawler.default_scrap()
+        # self.progress.emit()
+        # self.finished.emit()
+
 
 class Ui_EZ_Scrap(object):
     def setupUi(self, EZ_Scrap):
@@ -86,7 +111,7 @@ class Ui_EZ_Scrap(object):
         self.scrap_bt.setGeometry(QtCore.QRect(280, 0, 81, 51))
         self.scrap_bt.setFont(font)
         self.scrap_bt.setObjectName("scrap_bt")
-        self.scrap_bt.clicked.connect(self.web_crawler.default_scrap)
+        self.scrap_bt.clicked.connect(self.scrap)
         self.select_driver_bt = QtWidgets.QPushButton(self.tab_2)
         self.select_driver_bt.setGeometry(QtCore.QRect(10, 0, 211, 51))
         self.select_driver_bt.setFont(font)
@@ -156,11 +181,16 @@ class Ui_EZ_Scrap(object):
         for word in self.search_word:
             self.listWidget.addItem(word)
 
+    def scrap(self):
+        self.web_worker = WebWorker(self.web_crawler)
+        self.web_worker.start()
+
     def search_tweet(self):
         start_day = self.start_date.date().toPyDate() 
         end_day = self.end_date.date().toPyDate()
         keyword = self.lineEdit.text()
         exist = False
+        self.tw_worker = TweetWorker(keyword,start_day,end_day,self.tw_crawler)
 
         if keyword == "":
             self.no_text_in_keyword()
@@ -176,7 +206,7 @@ class Ui_EZ_Scrap(object):
                     break
                 start_day -= timedelta(1)
         if self.confirm:
-            self.tw_crawler.search_tweets(keyword,start_day,end_day)
+            self.tw_worker.start()
             self.update_search_word()
         if exist:
             self.get_tweets()
@@ -233,6 +263,7 @@ class Ui_EZ_Scrap(object):
         options |= QtWidgets.QFileDialog.DontUseNativeDialog
         file_path = QtWidgets.QFileDialog.getOpenFileName()
         self.web_crawler.set_selenium_webdriver(file_path[0])
+    
 
 if __name__ == "__main__":
     import sys

@@ -16,7 +16,9 @@
                 "2022-04-05",
                 "2022-04-04",
                 "2022-04-16",
-                "2022-04-15"
+                "2022-04-15",
+                "2022-04-18",
+                "2022-04-17"
             ]
         },
         "#IMDb": {
@@ -49,27 +51,36 @@
             "date": [
                 "2022-04-16"
             ]
+        },
+        "#Marvel": {
+            "date": [
+                "2022-04-17",
+                "2022-04-16",
+                "2022-04-15",
+                "2022-04-14"
+            ]
         }
     },
     "web-keyword": [],
     "link ref": {
-        "screenrant.com": 820,
-        "www.hollywoodreporter.com": 178,
+        "screenrant.com": 990,
+        "www.hollywoodreporter.com": 211,
         "www.nytimes.com": 26,
-        "www.thewrap.com": 35,
+        "www.thewrap.com": 49,
         "www.rollingstone.com": 164,
-        "collider.com": 63,
-        "www.empireonline.com": 75,
+        "collider.com": 90,
+        "www.empireonline.com": 81,
         "www.slashfilm.com": 5,
         "www.imdb.com": 18,
         "www.nme.com": 3,
-        "www.cinemablend.com": 12,
-        "www.cbr.com": 268,
+        "www.cbr.com": 358,
+        "www.cinemablend.com": 15,
         "www.bbc.com": 4,
         "wegotthiscovered.com": 3,
         "editorial.rottentomatoes.com": 2,
-        "movieweb.com": 12,
+        "movieweb.com": 14,
+        "www.irishtimes.com": 1,
         "www.joblo.com": 1
     },
-    "webdriver path": ""
+    "webdriver path": "D:/coding/EZ-Scrap/chromedriver.exe"
 }
