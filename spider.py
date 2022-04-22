@@ -1,3 +1,4 @@
+from ast import Return
 import os
 import re
 import json
@@ -39,6 +40,7 @@ class WebCrawler():
         self.found_link = set()
         self.scrap_data = {}
         self.metadata = {}
+        self.status = 'standby'
 
         self.setup_dir()
         self.load_metadata()
@@ -214,15 +216,19 @@ class WebCrawler():
         for site in [CBR, CinemaBlend, Collider, EmpireOnline, HollywoodReporter, IrishTimes,\
                      Joblo, Movie2News, MovieNewsNet, MovieWeb, NME, RottenTomatoes, \
                      SlashFilm, TheWrap]:
+            self.status = f'Scraping'
             data = site.ScrapSite()
             domain = data['metadata']['domain']
             c += data['metadata']['ref']
             self.metadata['link ref'] = c
+            self.status = f'Saving {domain} data'
             self.save_default_scrap(data, domain)
+            self.status = f'Saving metadata'
             self.save_metadata()
 
         PATH = self.metadata['webdriver path']
         for site in [Sanook, Screenrant]:
+            self.status = f'Scraping By selenium'
             if PATH != "":
                 data = site.ScrapSite(PATH)
             else:
@@ -233,8 +239,11 @@ class WebCrawler():
             domain = data['metadata']['domain']
             c += data['metadata']['ref']
             self.metadata['link ref'] = c
+            self.status = f'Saving {domain} data'
             self.save_default_scrap(data, domain)
+            self.status = f'Saving metadata'
             self.save_metadata()
+        self.status = f'standby'
     
     def save_default_scrap(self, data, domain):
         data['metadata']['web'] = list(data['metadata']['web'])
@@ -256,11 +265,15 @@ class WebCrawler():
             JSON = json.dumps(self.scrap_data[domain], indent=4, ensure_ascii=False) 
             outfile.write(JSON)
 
+    def get_status(self):
+        return self.status
+
 
 class TwitterCrawler():
 
     def __init__(self):
         self.metadata = {}
+        self.status = 'standby'
 
         self.setup_dir()    # setup data hierarchy
         self.load_metadata()
@@ -315,6 +328,7 @@ class TwitterCrawler():
         while start_day >= end_day:
             until_day = datetime.strftime(start_day + timedelta(1), '%Y-%m-%d')
             day = datetime.strftime(start_day, '%Y-%m-%d')
+            self.status = f'Collecting Tweets day : {day}'
             if keyword not in self.metadata['twitter-keyword'].keys():
                 self.metadata['twitter-keyword'][keyword] = {'date' : []}
             if day in self.metadata['twitter-keyword'][keyword]['date']:
@@ -333,17 +347,20 @@ class TwitterCrawler():
                         break
                     tweets.append(tweet)
                 except tw.TweepError:
+                    self.status = 'request limit exceed'
                     time.sleep(60 * 15)
                     continue
                 except StopIteration:
                     break
             if len(tweets) == 0:
+                self.status = 'standby'
                 continue
             
             users_locs = []
             if use_lan == "en":
                 for tweet in tweets:
                     hashtag = re.findall(hashtag_pattern, tweet.full_text)
+                    self.status = f'Doing Sentiment (EN)'
                     tweet_sen = sentiment(TextBlob(stem(cleanText(tweet.full_text))))
                     text = re.sub(hashtag_pattern,"", tweet.full_text)
                     print(f"https://twitter.com/twitter/statuses/{tweet.id}")
@@ -363,7 +380,9 @@ class TwitterCrawler():
                 tweet_text_list = []
                 for tweet in tweets:
                     tweet_text_list.append(tweet.full_text)
+                self.status = f'Cleaning text (TH)'
                 clean_text = cleanText_th(tweet_text_list)
+                self.status = f'Doing Sentiment (TH)'
                 sentiment_list = sentiment_th(clean_text)
                 for tweet, text, sent in zip(tweets, clean_text, sentiment_list):
                     hashtag = re.findall(hashtag_pattern, text)
@@ -384,17 +403,20 @@ class TwitterCrawler():
 
             if len(users_locs) == 0:
                 continue
-
             tweet_text = pd.DataFrame(data=users_locs, 
                 columns=['keyword','user','location','post date','tweet', 'favorite count', 'retweet count','hashtag','sentiment','tweet link'])
             tweet_text = tweet_text.sort_values('post date', ascending=True).reset_index(drop=True)     # sort by datetime
 
             # save to excel
+            self.status = f'Saving to Excel'
             tweet_text.to_excel(f"./data/tweets/{keyword}/{day}.xlsx", engine="openpyxl", index=False)
             self.metadata['twitter-keyword'][keyword]['date'].append(day)
             self.save_metadata()
             print(f"save to file : {day}.xlsx")
             start_day -= timedelta(1)
+
+    def get_status(self):
+        return self.status
 
 
 def cleanText(text):
