@@ -10,6 +10,7 @@ def ScrapSite(driver_path='./SeleniumDriver/chromedriver.exe'):
     data = {}
     data['data'] = get_data('screenrant.com')
     data['metadata'] = get_metadata('screenrant.com')
+    data['metadata']['lang'] = 'en'
 
     def get_article_urls() -> list:
         driver = webdriver.Chrome(driver_path)

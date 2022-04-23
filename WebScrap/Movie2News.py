@@ -4,6 +4,7 @@ def ScrapSite() -> dict:
     data = {}
     data['data'] = get_data('movie2news.com')
     data['metadata'] = get_metadata('movie2news.com')
+    data['metadata']['lang'] = 'th'
 
     def sub_fetch(session, url):
         if url in data['metadata']['web']:

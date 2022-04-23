@@ -1,3 +1,4 @@
+from importlib.metadata import metadata
 import os
 import re
 import json
@@ -268,14 +269,23 @@ class WebCrawler():
     def search(self, keyword : str, domain : str) -> tuple[Counter, list]:
         links = []
         sentiment = Counter()
+        metadata_json = open(f'./data/web-data/{domain}/metadata.json', encoding='UTF-8')
+        metadata = json.load(metadata_json)
         with open(f'./data/web-data/{domain}/data.json', encoding='UTF-8') as DATA:
             data = json.load(DATA)
             for page in data.keys():
-                content = data[page]['content']
+                try:
+                    content = data[page]['content']
+                except KeyError:
+                    continue
                 found = re.findall(keyword, content, re.IGNORECASE)
                 if found:
-                    links.append(page)
+                    # if metadata['lang'] == 'en':
+                    #     SENTIMENT = sentiment_en(content)
+                    # elif metadata['lang'] == 'th':
+                    #     SENTIMENT = sentiment_TH(content)
                     SENTIMENT = sentiment_en(content)
+                    links.append(page)
                     sentiment[SENTIMENT] += 1
                     sentiment['found'] += len(found)
         return (sentiment, links)
@@ -528,6 +538,23 @@ def sentiment_en(text : str) -> str:
     SENTIMENT = sentiment(TextBlob(stem(cleanText(text))))
     return SENTIMENT
     
+def sentiment_TH(text : str) -> str:
+    url = "https://api.aiforthai.in.th/ssense"
+    params = {'text':text}
+    headers = {
+        'Apikey': "fIwWRjuLjs8KrK8BcA7kaj5das47eZpH"
+    }
+    response = requests.get(url, headers=headers, params=params)
+
+    try:
+        if response.json()['sentiment']['polarity'] == '':
+            polarity = "neutral"
+        else:
+            polarity = response.json()['sentiment']['polarity']
+        return polarity
+    except requests.exceptions.JSONDecodeError:
+        return None
+
 def sentiment_th(tweet_text : list) -> list:
     def get_sentiment(text : str, index : int):
 
