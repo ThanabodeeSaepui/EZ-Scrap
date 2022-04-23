@@ -112,6 +112,7 @@ class Ui_EZ_Scrap(object):
         self.search_bt_2.setGeometry(QtCore.QRect(1160, 0, 81, 51))
         self.search_bt_2.setFont(font)
         self.search_bt_2.setObjectName("search_bt_2")
+        self.search_bt_2.clicked.connect(self.search_web)
         self.scrap_bt = QtWidgets.QPushButton(self.tab_2)
         self.scrap_bt.setGeometry(QtCore.QRect(280, 0, 81, 51))
         self.scrap_bt.setFont(font)
@@ -224,9 +225,14 @@ class Ui_EZ_Scrap(object):
             self.update_search_word()
         if exist:
             self.get_tweets()
+    
+    def search_web(self):
+        keyword = self.lineEdit_2.text()
+        data = self.web_crawler.search_web(keyword)
+        self.set_grid_table_web(data)
 
     
-    def set_grid_table(self,data):
+    def set_grid_table_tweet(self,data):
         self.table.setRowCount(data.shape[0])
         self.table.setColumnCount(data.shape[1])
         self.table.setHorizontalHeaderLabels(data.columns)
@@ -239,6 +245,20 @@ class Ui_EZ_Scrap(object):
         self.table.setColumnWidth(3,120)
         self.table.setColumnWidth(4,1000)
         self.table.setColumnWidth(8,340)
+    
+    def set_grid_table_web(self,data):
+        self.table_2.setRowCount(data.shape[0])
+        self.table_2.setColumnCount(data.shape[1])
+        self.table_2.setHorizontalHeaderLabels(data.columns)
+
+        for row in data.iterrows():
+            values = row[1]
+            for col_index,value in enumerate(values):
+                tableItem = QtWidgets.QTableWidgetItem(str(value))
+                self.table_2.setItem(row[0],col_index,tableItem)
+        # self.table_2.setColumnWidth(3,120)
+        # self.table_2.setColumnWidth(4,1000)
+        # self.table_2.setColumnWidth(8,340)
     
     def showItem(self):
         self.lineEdit.setText(self.listWidget.selectedItems()[0].text())
@@ -253,7 +273,7 @@ class Ui_EZ_Scrap(object):
             df_list.append(df)
         tweets = pd.concat(df_list, ignore_index=True)
         tweets = tweets.sort_values("post date")
-        self.set_grid_table(tweets)
+        self.set_grid_table_tweet(tweets)
 
     def get_tweets(self):
         start_day = self.start_date.date().toPyDate() 
@@ -270,7 +290,7 @@ class Ui_EZ_Scrap(object):
             start_day -= timedelta(1)
         tweets = pd.concat(df_list, ignore_index=True)
         tweets = tweets.sort_values("post date")
-        self.set_grid_table(tweets)
+        self.set_grid_table_tweet(tweets)
 
     def file_selected(self):
         options = QtWidgets.QFileDialog.Options()
