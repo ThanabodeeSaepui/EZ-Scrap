@@ -8,27 +8,40 @@ class TweetWorker(QtCore.QThread):
         QtCore.QThread.__init__(self)
         self.keyword , self.start_day, self.end_day = keyword , startday , endday
         self.tw_crawler = tw_crawler
-    # progress = QtCore.pyqtSignal()
-    # finished = QtCore.pyqtSignal()
 
     def run(self):
         TweetWorker.running = True
         self.tw_crawler.search_tweets(self.keyword,self.start_day,self.end_day)
         TweetWorker.running = False
-        # self.progress.emit()
-        # self.finished.emit()
 
-class WebWorker(QtCore.QThread):
+class WebWorker_Scrap(QtCore.QThread):
     def __init__(self,web_crawler):
         QtCore.QThread.__init__(self)
         self.web_crawler = web_crawler
-    # progress = QtCore.pyqtSignal()
-    # finished = QtCore.pyqtSignal()
 
     def run(self):
         self.web_crawler.default_scrap()
-        # self.progress.emit()
-        # self.finished.emit()
+
+class WebWorker_Search(QtCore.QThread):
+    finished = QtCore.pyqtSignal()
+    def __init__(self,keyword,web_crawler,table):
+        QtCore.QThread.__init__(self)
+        self.keyword = keyword
+        self.web_crawler = web_crawler
+        self.table = table
+
+    def run(self):
+        self.data = self.web_crawler.search_web(self.keyword)
+        self.finished.emit()
+        # self.table.setRowCount(data.shape[0])
+        # self.table.setColumnCount(data.shape[1])
+        # self.table.setHorizontalHeaderLabels(data.columns)
+
+        # for row in data.iterrows():
+        #     values = row[1]
+        #     for col_index,value in enumerate(values):
+        #         tableItem = QtWidgets.QTableWidgetItem(str(value))
+        #         self.table.setItem(row[0],col_index,tableItem)
 
 
 class Ui_EZ_Scrap(object):
@@ -197,7 +210,7 @@ class Ui_EZ_Scrap(object):
             self.listWidget.addItem(word)
 
     def scrap(self):
-        self.web_worker = WebWorker(self.web_crawler)
+        self.web_worker = WebWorker_Scrap(self.web_crawler)
         self.web_worker.start()
 
     def search_tweet(self):
@@ -228,8 +241,9 @@ class Ui_EZ_Scrap(object):
     
     def search_web(self):
         keyword = self.lineEdit_2.text()
-        data = self.web_crawler.search_web(keyword)
-        self.set_grid_table_web(data)
+        self.web_worker = WebWorker_Search(keyword,self.web_crawler,self.table_2)
+        self.web_worker.finished.connect(lambda:self.set_grid_table_web(self.web_worker.data))
+        self.web_worker.start()
 
     
     def set_grid_table_tweet(self,data):
