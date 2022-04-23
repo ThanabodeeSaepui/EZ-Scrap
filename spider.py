@@ -1,4 +1,4 @@
-from ast import Return
+from ast import Return, keyword
 import os
 import re
 import json
@@ -6,7 +6,9 @@ import time
 from collections import Counter
 from urllib.parse import urlparse
 from datetime import datetime, timedelta
+from multiprocessing import Pool
 from concurrent.futures import ThreadPoolExecutor
+from xml import dom
 
 from WebScrap import clean_html, remove_unuse_tag
 from WebScrap import CBR, CinemaBlend, Collider, EmpireOnline, HollywoodReporter, IrishTimes,\
@@ -264,6 +266,35 @@ class WebCrawler():
         with open(f"./data/web-data/{domain}/data.json", 'w', encoding="UTF-8") as outfile:
             JSON = json.dumps(self.scrap_data[domain], indent=4, ensure_ascii=False) 
             outfile.write(JSON)
+
+    def search(self, keyword : str, domain : str) -> tuple[Counter, list]:
+        links = []
+        sentiment = Counter()
+        with open(f'./data/web-data/{domain}/data.json', encoding='UTF-8') as DATA:
+            data = json.load(DATA)
+            for page in data.keys():
+                content = data[page]['content']
+                found = re.findall(keyword, content, re.IGNORECASE)
+                if found:
+                    links.append(page)
+                    SENTIMENT = sentiment_en(content)
+                    sentiment[SENTIMENT] += 1
+                    sentiment['found'] += len(found)
+        return (sentiment, links)
+
+    def search_web(self, keyword : str) -> pd.DataFrame:
+        self.status = f'searching keyword : {keyword}'
+        domain = os.listdir('./data/web-data')
+        REF = Counter(self.metadata['link ref'])
+        with Pool(os.cpu_count()) as pool:
+            results = pool.starmap(self.search, iterable=[(keyword, d) for d in domain])
+        LOCS = [[domain, results[0]['found'], results[0]['positive'], results[0]['neutral'], results[0]['negative'], REF[domain], results[1]]
+            for domain, results in zip(domain, results)]
+        df = pd.DataFrame(
+            data=LOCS, 
+            columns=['Domain', 'Found', 'Positive', 'Neutral', 'Negative', 'Ref Count', 'url'])
+        self.status = 'standby'
+        return df
 
     def get_status(self):
         return self.status
@@ -560,5 +591,12 @@ if not os.path.exists('./data'):
     os.mkdir('./data')
 
 if __name__ == '__main__':
+    import timeit
+    _keyword = 'Batman'
+
     WB = WebCrawler()
-    WB.default_scrap()
+    start = timeit.default_timer()
+    f = WB.search_web(_keyword)
+    print(f)
+    stop = timeit.default_timer()
+    print('Time: ', stop - start)
