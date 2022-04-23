@@ -1,4 +1,3 @@
-from ast import Return, keyword
 import os
 import re
 import json
@@ -8,7 +7,6 @@ from urllib.parse import urlparse
 from datetime import datetime, timedelta
 from multiprocessing import Pool
 from concurrent.futures import ThreadPoolExecutor
-from xml import dom
 
 from WebScrap import clean_html, remove_unuse_tag
 from WebScrap import CBR, CinemaBlend, Collider, EmpireOnline, HollywoodReporter, IrishTimes,\
@@ -359,11 +357,11 @@ class TwitterCrawler():
         while start_day >= end_day:
             until_day = datetime.strftime(start_day + timedelta(1), '%Y-%m-%d')
             day = datetime.strftime(start_day, '%Y-%m-%d')
-            self.status = f'Collecting Tweets day : {day}'
             if keyword not in self.metadata['twitter-keyword'].keys():
                 self.metadata['twitter-keyword'][keyword] = {'date' : []}
             if day in self.metadata['twitter-keyword'][keyword]['date']:
                 continue
+            self.status = f'Collecting Tweets day : {day}'
             c = tw.Cursor(api.search_tweets, 
                         q=f"{keyword} -filter:retweets",
                         lang=use_lan,
