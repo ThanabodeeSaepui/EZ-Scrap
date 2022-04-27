@@ -26,13 +26,20 @@ def remove_unuse_tag(bs : BeautifulSoup) -> BeautifulSoup:
 
 def count_link_ref(bs : BeautifulSoup, current_domain : str) -> Counter:
     c = Counter()
+    s = set()
     for a in bs.find_all('a'):
         try:
             domain = urlparse(a.attrs['href']).netloc
             if (domain in default_domain) and (domain != current_domain):
-                c[domain] += 1
+                if domain not in s:
+                    s.add(domain)
+                    c[domain] += 1
+                else:
+                    continue
         except KeyError:    # no href found
-            pass
+            continue
+    if current_domain in ['collider.com', 'www.cbr.com']:
+        c['screenrant.com'] = 0
     return c
 
 def get_data(domain : str) -> dict:
