@@ -12,7 +12,7 @@ from concurrent.futures import ThreadPoolExecutor
 from WebScrap import clean_html, remove_unuse_tag
 from WebScrap import CBR, CinemaBlend, Collider, EmpireOnline, HollywoodReporter, IrishTimes,\
                      Joblo, Movie2News, MovieNewsNet, MovieWeb, NME, RottenTomatoes, Sanook, \
-                     Screenrant, SlashFilm, TheWrap, Wegotthiscovered
+                     Screenrant, SlashFilm, TheWrap, Wegotthiscovered, FirstShowing, Entertainment, IGN
 
 import requests
 import pandas as pd
@@ -214,7 +214,7 @@ class WebCrawler():
         c = Counter()
         for site in [CBR, CinemaBlend, Collider, EmpireOnline, HollywoodReporter, IrishTimes,\
                      Joblo, Movie2News, MovieNewsNet, MovieWeb, NME, RottenTomatoes, \
-                     SlashFilm, TheWrap, Wegotthiscovered]:
+                     SlashFilm, TheWrap, Wegotthiscovered, FirstShowing]:
             self.status = f'Scraping'
             data = site.ScrapSite()
             domain = data['metadata']['domain']
@@ -226,7 +226,7 @@ class WebCrawler():
             self.save_metadata()
 
         PATH = self.metadata['webdriver path']
-        for site in [Sanook, Screenrant]:
+        for site in [Sanook, Screenrant, Entertainment, IGN]:
             self.status = f'Scraping By selenium'
             if PATH != "":
                 data = site.ScrapSite(PATH)
