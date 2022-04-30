@@ -12,7 +12,7 @@ from concurrent.futures import ThreadPoolExecutor
 from WebScrap import clean_html, remove_unuse_tag
 from WebScrap import CBR, CinemaBlend, Collider, EmpireOnline, HollywoodReporter, IrishTimes,\
                      Joblo, Movie2News, MovieNewsNet, MovieWeb, NME, RottenTomatoes, Sanook, \
-                     Screenrant, SlashFilm, TheWrap
+                     Screenrant, SlashFilm, TheWrap, Wegotthiscovered
 
 import requests
 import pandas as pd
@@ -33,8 +33,6 @@ class WebCrawler():
             'https://www.imdb.com/news/movie',
             'https://www.bbc.com/news/topics/cg41ylwvgjyt/film',
             'https://www.nytimes.com/section/movies',
-            'https://www.euronews.com/culture/see/cinema',
-            'https://wegotthiscovered.com/movies/',
             ]
         self.start_link_domain = [urlparse(link).netloc for link in self.start_link]
 
@@ -216,7 +214,7 @@ class WebCrawler():
         c = Counter()
         for site in [CBR, CinemaBlend, Collider, EmpireOnline, HollywoodReporter, IrishTimes,\
                      Joblo, Movie2News, MovieNewsNet, MovieWeb, NME, RottenTomatoes, \
-                     SlashFilm, TheWrap]:
+                     SlashFilm, TheWrap, Wegotthiscovered]:
             self.status = f'Scraping'
             data = site.ScrapSite()
             domain = data['metadata']['domain']
