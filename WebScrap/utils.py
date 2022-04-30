@@ -40,6 +40,8 @@ def count_link_ref(bs : BeautifulSoup, current_domain : str) -> Counter:
             continue
     if current_domain in ['collider.com', 'www.cbr.com']:
         c['screenrant.com'] = 0
+    if current_domain in ['screenrant.com']:
+        c['www.cbr.com'] = 0
     return c
 
 def get_data(domain : str) -> dict:
