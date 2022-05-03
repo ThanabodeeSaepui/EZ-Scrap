@@ -221,8 +221,11 @@ class Ui_EZ_Scrap(object):
     def update_status(self):
         tweet_status = self.tw_crawler.get_status()
         web_status = self.web_crawler.get_status()
+        
         self.label_4.setText(f"Status : {tweet_status}")
         self.label_5.setText(f"Status : {web_status}")
+        
+        self.update_search_word()
 
     def confirm_scrap_popup(self):
         popup = QtWidgets.QMessageBox()
@@ -310,9 +313,6 @@ class Ui_EZ_Scrap(object):
             for col_index,value in enumerate(values):
                 tableItem = QtWidgets.QTableWidgetItem(str(value))
                 self.table.setItem(row[0],col_index,tableItem)
-        self.table.setColumnWidth(3,120)
-        self.table.setColumnWidth(4,1000)
-        self.table.setColumnWidth(8,340)
     
     def set_grid_table_web(self,data):
         self.table_2.setRowCount(data.shape[0])
@@ -324,9 +324,6 @@ class Ui_EZ_Scrap(object):
             for col_index,value in enumerate(values):
                 tableItem = QtWidgets.QTableWidgetItem(str(value))
                 self.table_2.setItem(row[0],col_index,tableItem)
-        # self.table_2.setColumnWidth(3,120)
-        # self.table_2.setColumnWidth(4,1000)
-        # self.table_2.setColumnWidth(8,340)
     
     def showItem(self):
         self.lineEdit.setText(self.listWidget.selectedItems()[0].text())
@@ -342,6 +339,7 @@ class Ui_EZ_Scrap(object):
         tweets = pd.concat(df_list, ignore_index=True)
         tweets = tweets.sort_values("post date")
         self.set_grid_table_tweet(tweets)
+        self.show_sentiment(tweets)
 
     def get_tweets(self):
         start_day = self.start_date.date().toPyDate() 
@@ -359,6 +357,17 @@ class Ui_EZ_Scrap(object):
         tweets = pd.concat(df_list, ignore_index=True)
         tweets = tweets.sort_values("post date")
         self.set_grid_table_tweet(tweets)
+        self.show_sentiment(tweets)
+
+    def show_sentiment(self,data):
+        sentiment = data["sentiment"].value_counts()
+        neutral = sentiment["neutral"]
+        positive = sentiment["positive"]
+        negative = sentiment["negative"]
+
+        self.label_8.setText(f"{((positive/sentiment.sum())*100):.2f} %")
+        self.label_9.setText(f"{((neutral/sentiment.sum())*100):.2f} %")
+        self.label_10.setText(f"{((negative/sentiment.sum())*100):.2f} %")
 
     def file_selected(self):
         options = QtWidgets.QFileDialog.Options()
