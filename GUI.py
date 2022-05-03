@@ -61,6 +61,7 @@ class Ui_EZ_Scrap(object):
         self.export_bt.setGeometry(QtCore.QRect(1100, 80, 151, 51))
         self.export_bt.setFont(font)
         self.export_bt.setObjectName("export_bt")
+        self.export_bt.clicked.connect(self.export_file_tweet)
         self.lineEdit = QtWidgets.QLineEdit(self.tab)
         self.lineEdit.setGeometry(QtCore.QRect(470, 20, 651, 20))
         self.lineEdit.setObjectName("lineEdit")
@@ -135,11 +136,11 @@ class Ui_EZ_Scrap(object):
         self.label_10.setFont(font)
         self.label_10.setObjectName("label_10")
         self.related_label = QtWidgets.QLabel(self.tab_4)
-        self.related_label.setGeometry(QtCore.QRect(10, 240, 231, 91))
+        self.related_label.setGeometry(QtCore.QRect(10, 210, 231, 91))
         self.related_label.setFont(font)
         self.related_label.setObjectName("related_label")
         self.related_table = QtWidgets.QTableWidget(self.tab_4)
-        self.related_table.setGeometry(QtCore.QRect(10, 330, 1041, 231))
+        self.related_table.setGeometry(QtCore.QRect(10, 280, 1041, 281))
         self.related_table.setObjectName("related_table")
         self.sentiment_label = QtWidgets.QLabel(self.tab_4)
         self.sentiment_label.setGeometry(QtCore.QRect(10, -10, 231, 91))
@@ -172,6 +173,7 @@ class Ui_EZ_Scrap(object):
         self.export_bt_2.setGeometry(QtCore.QRect(1120, 60, 151, 51))
         self.export_bt_2.setFont(font)
         self.export_bt_2.setObjectName("export_bt_2")
+        self.export_bt_2.clicked.connect(self.export_file_web)
         self.select_driver_bt = QtWidgets.QPushButton(self.tab_2)
         self.select_driver_bt.setGeometry(QtCore.QRect(10, 0, 211, 51))
         self.select_driver_bt.setFont(font)
@@ -188,6 +190,8 @@ class Ui_EZ_Scrap(object):
         self.qTimer.start()
 
         self.confirm = False
+
+        self.tweets = pd.DataFrame()
 
     def retranslateUi(self, EZ_Scrap):
         _translate = QtCore.QCoreApplication.translate
@@ -355,11 +359,11 @@ class Ui_EZ_Scrap(object):
                 df = pd.read_excel(f"./data/tweets/{keyword}/{day}.xlsx",engine="openpyxl")
                 df_list.append(df)
             start_day -= timedelta(1)
-        tweets = pd.concat(df_list, ignore_index=True)
-        tweets = tweets.sort_values("post date")
-        count_word = self.find_related_word(tweets,keyword)
-        self.set_grid_table_tweet(tweets)
-        self.show_sentiment(tweets)
+        self.tweets = pd.concat(df_list, ignore_index=True)
+        self.tweets = self.tweets.sort_values("post date")
+        count_word = self.find_related_word(self.tweets,keyword)
+        self.set_grid_table_tweet(self.tweets)
+        self.show_sentiment(self.tweets)
         self.show_related_word(count_word)
 
     def show_sentiment(self,data):
@@ -376,7 +380,12 @@ class Ui_EZ_Scrap(object):
         text = re.sub("\d+", "", text)
         text_tokens = word_tokenize(text)
         text = [word for word in text_tokens if not word.lower() in stopwords.words("english")]
-        text = ' '.join(text)
+        real_text = []
+        for word in text:
+            if len(word) == 1:
+                continue
+            real_text.append(word)
+        text = ' '.join(real_text)
 
         return text
     
@@ -388,14 +397,21 @@ class Ui_EZ_Scrap(object):
         for list in data["hashtag"]:
             count_word += Counter(eval(list))
         count_word[keyword] = 0
+        count_word[keyword.lower()] = 0
+        count_word[keyword.upper()] = 0
+        count_word[keyword.replace('#','')] = 0
+        count_word[keyword.replace('#','').lower()] = 0
+        count_word[keyword.replace('#','').upper()] = 0
+        
 
         return count_word
     
     def show_related_word(self,count_word):
-        self.related_table.setRowCount(10)
+        self.related_table.setRowCount(20)
         self.related_table.setColumnCount(2)
+        self.related_table.setHorizontalHeaderLabels(["Word","Count"])
         
-        for row,item in enumerate(count_word.most_common()[:10]):
+        for row,item in enumerate(count_word.most_common()[:20]):
             self.related_table.setItem(row,0,QtWidgets.QTableWidgetItem(item[0]))
             self.related_table.setItem(row,1,QtWidgets.QTableWidgetItem(str(item[1])))
 
@@ -405,6 +421,28 @@ class Ui_EZ_Scrap(object):
         options |= QtWidgets.QFileDialog.DontUseNativeDialog
         file_path = QtWidgets.QFileDialog.getOpenFileName()
         self.web_crawler.set_selenium_webdriver(file_path[0])
+    
+    def export_file_tweet(self):
+        file_filter = 'Excel File (*.xlsx)'
+        response = QtWidgets.QFileDialog.getSaveFileName(
+            caption='Export file',
+            filter=file_filter,
+            initialFilter='Excel File (*.xlsx)'
+        )
+        if not self.tweets.empty:
+            df = self.tweets.iloc[:, [0,1,2,3,5,6,8]]
+            df.to_excel(response[0],engine="openpyxl", index=False)
+    
+    def export_file_web(self):
+        file_filter = 'Excel File (*.xlsx)'
+        response = QtWidgets.QFileDialog.getSaveFileName(
+            caption='Export file',
+            filter=file_filter,
+            initialFilter='Excel File (*.xlsx)'
+        )
+        if not self.web_worker.data.empty:
+            df = self.web_worker.data.iloc[:, 0:-1]
+            df.to_excel(response[0],engine="openpyxl", index=False)
     
 
 if __name__ == "__main__":

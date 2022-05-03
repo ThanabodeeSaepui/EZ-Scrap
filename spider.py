@@ -294,11 +294,11 @@ class WebCrawler():
         REF = Counter(self.metadata['link ref'])
         with Pool(os.cpu_count()) as pool:
             results = pool.starmap(self.search, iterable=[(keyword, d) for d in domain])
-        LOCS = [[domain, results[0]['found'], results[0]['positive'], results[0]['neutral'], results[0]['negative'], REF[domain], results[1]]
+        LOCS = [[keyword,domain, results[0]['found'], results[0]['positive'], results[0]['neutral'], results[0]['negative'], REF[domain], results[1]]
             for domain, results in zip(domain, results)]
         df = pd.DataFrame(
             data=LOCS, 
-            columns=['Domain', 'Found', 'Positive', 'Neutral', 'Negative', 'Ref Count', 'url'])
+            columns=['Keyword','Domain', 'Found', 'Positive', 'Neutral', 'Negative', 'Ref Count', 'url'])
         self.status = 'standby'
         return df
 
