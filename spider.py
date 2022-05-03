@@ -264,11 +264,12 @@ class WebCrawler():
             JSON = json.dumps(self.scrap_data[domain], indent=4, ensure_ascii=False) 
             outfile.write(JSON)
 
-    def search(self, keyword : str, domain : str) -> tuple[Counter, list]:
+    def search(self, keyword : str, domain : str) -> tuple[Counter, list, Counter]:
         links = []
         sentiment = Counter()
         metadata_json = open(f'./data/web-data/{domain}/metadata.json', encoding='UTF-8')
         metadata = json.load(metadata_json)
+        cnt = Counter()
         with open(f'./data/web-data/{domain}/data.json', encoding='UTF-8') as DATA:
             data = json.load(DATA)
             for page in data.keys():
@@ -278,29 +279,42 @@ class WebCrawler():
                     continue
                 found = re.findall(keyword, content, re.IGNORECASE)
                 if found:
-                    # if metadata['lang'] == 'en':
-                    #     SENTIMENT = sentiment_en(content)
-                    # elif metadata['lang'] == 'th':
-                    #     SENTIMENT = sentiment_TH(content)
-                    SENTIMENT = sentiment_en(content)
+                    clean_text = cleanText(content)
+                    SENTIMENT = sentiment_en(clean_text)
                     links.append(page)
                     sentiment[SENTIMENT] += 1
                     sentiment['found'] += len(found)
-        return (sentiment, links)
+                    cnt += self.count_word(clean_text)
+        return (sentiment, links, cnt)
 
     def search_web(self, keyword : str) -> pd.DataFrame:
+        import timeit
+        start = timeit.default_timer()
         self.status = f'searching keyword : {keyword}'
         domain = os.listdir('./data/web-data')
         REF = Counter(self.metadata['link ref'])
         with Pool(os.cpu_count()) as pool:
             results = pool.starmap(self.search, iterable=[(keyword, d) for d in domain])
-        LOCS = [[keyword,domain, results[0]['found'], results[0]['positive'], results[0]['neutral'], results[0]['negative'], REF[domain], results[1]]
-            for domain, results in zip(domain, results)]
+        LOCS = [[keyword,domain, result[0]['found'], result[0]['positive'], result[0]['neutral'], result[0]['negative'], REF[domain], result[1]]
+            for domain, result in zip(domain, results)]
+        cnt = Counter()
+        for result in results:
+            cnt += Counter(result[2])
+        print(cnt.most_common(30))
         df = pd.DataFrame(
             data=LOCS, 
             columns=['Keyword','Domain', 'Found', 'Positive', 'Neutral', 'Negative', 'Ref Count', 'url'])
         self.status = 'standby'
+        stop = timeit.default_timer()
+        print('Time: ', stop - start)  
         return df
+
+    def count_word(self, text : str) -> Counter:
+        text = re.sub(r'[^\w\s]', '', text)
+        text = re.sub("\d+", "", text)
+        cnt = Counter(text.split(' '))
+        cnt[''] = 0
+        return cnt
 
     def get_status(self):
         return self.status
@@ -470,7 +484,8 @@ def cleanText(text):
 
     # Removes stop words that have no use in sentiment analysis 
     text_tokens = word_tokenize(text)
-    text = [word for word in text_tokens if not word in stopwords.words("english")]
+    text = [word for word in text_tokens 
+        if (not word.lower() in stopwords.words("english")) and (len(word)>1)]
 
     text = ' '.join(text)
     return text
@@ -533,7 +548,7 @@ def cleanText_th(tweet_text : list) -> list:
     return cleantext
 
 def sentiment_en(text : str) -> str:
-    SENTIMENT = sentiment(TextBlob(stem(cleanText(text))))
+    SENTIMENT = sentiment(TextBlob(stem(text)))
     return SENTIMENT
     
 def sentiment_TH(text : str) -> str:
