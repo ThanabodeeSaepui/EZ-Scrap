@@ -24,25 +24,14 @@ class WebWorker_Scrap(QtCore.QThread):
 
 class WebWorker_Search(QtCore.QThread):
     finished = QtCore.pyqtSignal()
-    def __init__(self,keyword,web_crawler,table):
+    def __init__(self,keyword,web_crawler):
         QtCore.QThread.__init__(self)
         self.keyword = keyword
         self.web_crawler = web_crawler
-        self.table = table
 
     def run(self):
         self.data = self.web_crawler.search_web(self.keyword)
         self.finished.emit()
-        # self.table.setRowCount(data.shape[0])
-        # self.table.setColumnCount(data.shape[1])
-        # self.table.setHorizontalHeaderLabels(data.columns)
-
-        # for row in data.iterrows():
-        #     values = row[1]
-        #     for col_index,value in enumerate(values):
-        #         tableItem = QtWidgets.QTableWidgetItem(str(value))
-        #         self.table.setItem(row[0],col_index,tableItem)
-
 
 class Ui_EZ_Scrap(object):
     def setupUi(self, EZ_Scrap):
@@ -68,6 +57,10 @@ class Ui_EZ_Scrap(object):
         self.search_label.setGeometry(QtCore.QRect(350, 10, 101, 41))
         self.search_label.setFont(font)
         self.search_label.setObjectName("search_label")
+        self.export_bt = QtWidgets.QPushButton(self.tab)
+        self.export_bt.setGeometry(QtCore.QRect(1100, 80, 151, 51))
+        self.export_bt.setFont(font)
+        self.export_bt.setObjectName("export_bt")
         self.lineEdit = QtWidgets.QLineEdit(self.tab)
         self.lineEdit.setGeometry(QtCore.QRect(470, 20, 651, 20))
         self.lineEdit.setObjectName("lineEdit")
@@ -156,7 +149,7 @@ class Ui_EZ_Scrap(object):
         self.tab_2 = QtWidgets.QWidget()
         self.tab_2.setObjectName("tab_2")
         self.table_2 = QtWidgets.QTableWidget(self.tab_2)
-        self.table_2.setGeometry(QtCore.QRect(10, 110, 1261, 611))
+        self.table_2.setGeometry(QtCore.QRect(10, 130, 1261, 591))
         self.table_2.setObjectName("tableView_2")
         self.label_5 = QtWidgets.QLabel(self.tab_2)
         self.label_5.setGeometry(QtCore.QRect(470, 50, 651, 41))
@@ -175,6 +168,10 @@ class Ui_EZ_Scrap(object):
         self.scrap_bt.setFont(font)
         self.scrap_bt.setObjectName("scrap_bt")
         self.scrap_bt.clicked.connect(self.scrap)
+        self.export_bt_2 = QtWidgets.QPushButton(self.tab_2)
+        self.export_bt_2.setGeometry(QtCore.QRect(1120, 60, 151, 51))
+        self.export_bt_2.setFont(font)
+        self.export_bt_2.setObjectName("export_bt_2")
         self.select_driver_bt = QtWidgets.QPushButton(self.tab_2)
         self.select_driver_bt.setGeometry(QtCore.QRect(10, 0, 211, 51))
         self.select_driver_bt.setFont(font)
@@ -211,6 +208,8 @@ class Ui_EZ_Scrap(object):
         self.label_8.setText(_translate("EZ_Scrap", "100%"))
         self.label_9.setText(_translate("EZ_Scrap", "100%"))
         self.label_10.setText(_translate("EZ_Scrap", "100%"))
+        self.export_bt.setText(_translate("EZ_Scrap", "Export"))
+        self.export_bt_2.setText(_translate("EZ_Scrap", "Export"))
         self.related_label.setText(_translate("EZ_Scrap", "Related words"))
         self.sentiment_label.setText(_translate("EZ_Scrap", "Sentiment"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab), _translate("EZ_Scrap", "Twitter"))
@@ -298,7 +297,7 @@ class Ui_EZ_Scrap(object):
     
     def search_web(self):
         keyword = self.lineEdit_2.text()
-        self.web_worker = WebWorker_Search(keyword,self.web_crawler,self.table_2)
+        self.web_worker = WebWorker_Search(keyword,self.web_crawler)
         self.web_worker.finished.connect(lambda:self.set_grid_table_web(self.web_worker.data))
         self.web_worker.start()
 
@@ -340,6 +339,8 @@ class Ui_EZ_Scrap(object):
         tweets = tweets.sort_values("post date")
         self.set_grid_table_tweet(tweets)
         self.show_sentiment(tweets)
+        count_word = self.find_related_word(tweets,keyword)
+        self.show_related_word(count_word)
 
     def get_tweets(self):
         start_day = self.start_date.date().toPyDate() 
@@ -356,8 +357,10 @@ class Ui_EZ_Scrap(object):
             start_day -= timedelta(1)
         tweets = pd.concat(df_list, ignore_index=True)
         tweets = tweets.sort_values("post date")
+        count_word = self.find_related_word(tweets,keyword)
         self.set_grid_table_tweet(tweets)
         self.show_sentiment(tweets)
+        self.show_related_word(count_word)
 
     def show_sentiment(self,data):
         sentiment = data["sentiment"].value_counts()
@@ -368,6 +371,34 @@ class Ui_EZ_Scrap(object):
         self.label_8.setText(f"{((positive/sentiment.sum())*100):.2f} %")
         self.label_9.setText(f"{((neutral/sentiment.sum())*100):.2f} %")
         self.label_10.setText(f"{((negative/sentiment.sum())*100):.2f} %")
+
+    def del_stopword(self,text):
+        text = re.sub("\d+", "", text)
+        text_tokens = word_tokenize(text)
+        text = [word for word in text_tokens if not word.lower() in stopwords.words("english")]
+        text = ' '.join(text)
+
+        return text
+    
+    def find_related_word(self,data,keyword) -> Counter:
+        count_word = Counter()
+        for tweet in data["tweet"]:
+            text = self.del_stopword(str(tweet))
+            count_word += Counter(text.split(' '))
+        for list in data["hashtag"]:
+            count_word += Counter(eval(list))
+        count_word[keyword] = 0
+
+        return count_word
+    
+    def show_related_word(self,count_word):
+        self.related_table.setRowCount(10)
+        self.related_table.setColumnCount(2)
+        
+        for row,item in enumerate(count_word.most_common()[:10]):
+            self.related_table.setItem(row,0,QtWidgets.QTableWidgetItem(item[0]))
+            self.related_table.setItem(row,1,QtWidgets.QTableWidgetItem(str(item[1])))
+
 
     def file_selected(self):
         options = QtWidgets.QFileDialog.Options()
