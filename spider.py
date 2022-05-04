@@ -286,7 +286,7 @@ class WebCrawler():
                     cnt += self.count_word(clean_text)
         return (sentiment, links, cnt)
 
-    def search_web(self, keyword : str) -> pd.DataFrame:
+    def search_web(self, keyword : str) -> tuple[pd.DataFrame, Counter]:
         import timeit
         start = timeit.default_timer()
         self.status = f'searching keyword : {keyword}'
@@ -299,14 +299,13 @@ class WebCrawler():
         cnt = Counter()
         for result in results:
             cnt += Counter(result[2])
-        print(cnt.most_common(30))
         df = pd.DataFrame(
             data=LOCS, 
             columns=['Keyword','Domain', 'Found', 'Positive', 'Neutral', 'Negative', 'Ref Count', 'url'])
         self.status = 'standby'
         stop = timeit.default_timer()
-        print('Time: ', stop - start)  
-        return df
+        print(f'Search {keyword}Time: {stop - start}')
+        return (df, cnt)
 
     def count_word(self, text : str) -> Counter:
         text = re.sub(r'[^\w\s]', '', text)
@@ -412,7 +411,8 @@ class TwitterCrawler():
                     hashtag = re.findall(hashtag_pattern, tweet.full_text)
                     cleantext = cleanText(tweet.full_text)
                     self.status = f'Doing Sentiment (EN)'
-                    tweet_sen = sentiment(TextBlob(stem(cleanText(tweet.full_text))))
+                    clean_txt = cleanText(tweet.full_text)
+                    tweet_sen = sentiment(TextBlob(stem(clean_txt)))
                     text = re.sub(hashtag_pattern,"", tweet.full_text)
                     print(f"https://twitter.com/twitter/statuses/{tweet.id}")
                     locs = [

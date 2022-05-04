@@ -188,7 +188,7 @@ class Ui_EZ_Scrap(object):
         self.related_label_2.setGeometry(QtCore.QRect(10, 210, 231, 91))
         self.related_label_2.setFont(font)
         self.related_label_2.setObjectName("related_label_2")
-        self.related_table_2 = QtWidgets.QTableView(self.tab_6)
+        self.related_table_2 = QtWidgets.QTableWidget(self.tab_6)
         self.related_table_2.setGeometry(QtCore.QRect(10, 280, 1041, 281))
         self.related_table_2.setObjectName("tableView_5")
         self.sentiment_label2 = QtWidgets.QLabel(self.tab_6)
@@ -375,15 +375,32 @@ class Ui_EZ_Scrap(object):
                 self.table.setItem(row[0],col_index,tableItem)
     
     def set_grid_table_web(self,data):
-        self.table_2.setRowCount(data.shape[0])
-        self.table_2.setColumnCount(data.shape[1])
-        self.table_2.setHorizontalHeaderLabels(data.columns)
+        # data
+        self.table_2.setRowCount(data[0].shape[0])
+        self.table_2.setColumnCount(data[0].shape[1])
+        self.table_2.setHorizontalHeaderLabels(data[0].columns)
 
-        for row in data.iterrows():
+        for row in data[0].iterrows():
             values = row[1]
             for col_index,value in enumerate(values):
                 tableItem = QtWidgets.QTableWidgetItem(str(value))
                 self.table_2.setItem(row[0],col_index,tableItem)
+        # count word
+        self.related_table_2.setRowCount(30)
+        self.related_table_2.setColumnCount(2)
+        self.related_table_2.setHorizontalHeaderLabels(["Word","Count"])
+        
+        for row, item in enumerate(data[1].most_common(30)):
+            self.related_table_2.setItem(row,0,QtWidgets.QTableWidgetItem(item[0]))
+            self.related_table_2.setItem(row,1,QtWidgets.QTableWidgetItem(str(item[1])))
+        # sentiment 
+        pos = data[0]['Positive'].sum()
+        neu = data[0]['Neutral'].sum()
+        neg = data[0]['Negative'].sum()
+        sum = pos + neu + neg
+        self.label_11.setText(f'{(pos/sum*100):.2f} %')
+        self.label_12.setText(f'{(neu/sum*100):.2f} %')
+        self.label_13.setText(f'{(neg/sum*100):.2f} %')
     
     def showItem(self):
         self.lineEdit.setText(self.listWidget.selectedItems()[0].text())
@@ -515,11 +532,11 @@ class Ui_EZ_Scrap(object):
         return count_word
     
     def show_related_word(self,count_word):
-        self.related_table.setRowCount(20)
+        self.related_table.setRowCount(30)
         self.related_table.setColumnCount(2)
         self.related_table.setHorizontalHeaderLabels(["Word","Count"])
         
-        for row,item in enumerate(count_word.most_common()[:20]):
+        for row,item in enumerate(count_word.most_common(30)):
             self.related_table.setItem(row,0,QtWidgets.QTableWidgetItem(item[0]))
             self.related_table.setItem(row,1,QtWidgets.QTableWidgetItem(str(item[1])))
 
