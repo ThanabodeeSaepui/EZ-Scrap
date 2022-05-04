@@ -1,4 +1,3 @@
-from cmath import nan
 from PyQt5 import QtCore, QtGui, QtWidgets
 from datetime import date
 from spider import *
