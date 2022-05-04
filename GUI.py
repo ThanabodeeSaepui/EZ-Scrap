@@ -1,6 +1,9 @@
+from cmath import nan
 from PyQt5 import QtCore, QtGui, QtWidgets
 from datetime import date
 from spider import *
+from pythainlp import word_tokenize as token_th
+from pythainlp.corpus import thai_stopwords
 
 class TweetWorker(QtCore.QThread):
     running = False
@@ -443,21 +446,72 @@ class Ui_EZ_Scrap(object):
 
         return text
     
+    def del_stopword_th(self,text):
+        stopwords = list(thai_stopwords())
+        text_token = token_th(text,keep_whitespace=False,engine="longest")
+        text = [word for word in text_token if word not in stopwords]
+        return text
+         
+    def cleanText_th(tweet_text : list) -> list:
+        def get_cleantext(text : str,index : int):
+
+            text = re.sub('http://\S+|https://\S+', '', text) # remove url
+
+
+            url = "https://api.aiforthai.in.th/textcleansing" #api for remove emoji
+            
+            params = {f'text':{text}}
+            
+            
+            headers = {
+                'Apikey': "fIwWRjuLjs8KrK8BcA7kaj5das47eZpH",
+                }
+            
+            response = requests.request("GET", url, headers=headers, params=params)
+            cleantext[index] = response.json()['cleansing_text']
+
+        n = len(tweet_text)
+        cleantext = [None] * n
+        with ThreadPoolExecutor(max_workers=n) as executor:
+            executor.map(get_cleantext, tweet_text, list(range(n)))
+            executor.shutdown(wait=True)
+    
+    
+        return cleantext
+    
     def find_related_word(self,data,keyword) -> Counter:
         count_word = Counter()
-        for tweet in data["tweet"]:
-            text = self.del_stopword(str(tweet))
-            count_word += Counter(text.split(' '))
-        for list in data["hashtag"]:
-            count_word += Counter(eval(list))
-        count_word[keyword] = 0
-        count_word[keyword.lower()] = 0
-        count_word[keyword.upper()] = 0
-        count_word[keyword.replace('#','')] = 0
-        count_word[keyword.replace('#','').lower()] = 0
-        count_word[keyword.replace('#','').upper()] = 0
-        
-
+        reg = re.compile(r'[a-zA-Z]')
+        if reg.match(keyword.replace("#","")):
+            for tweet in data["tweet"]:
+                text = self.del_stopword(str(tweet))
+                count_word += Counter(text.split(' '))
+            for list in data["hashtag"]:
+                count_word += Counter(eval(list))
+            count_word[keyword] = 0
+            count_word[keyword.lower()] = 0
+            count_word[keyword.upper()] = 0
+            count_word[keyword.replace('#','')] = 0
+            count_word[keyword.replace('#','').lower()] = 0
+            count_word[keyword.replace('#','').upper()] = 0
+        else:
+            pattern = re.compile(r"[^\u0E00-\u0E7F]")
+            textlist = cleanText_th(data["tweet"])
+            realtext = []
+            for text in textlist:
+                text = re.sub(pattern,"",str(text))
+                text = self.del_stopword_th(text)
+                for word in text:
+                    if len(word) == 1:
+                        continue
+                    realtext.append(word)
+                count_word += Counter(realtext)
+            for hashtag in data["hashtag"]:
+                try:
+                    count_word += Counter(eval(hashtag))
+                except:
+                    continue
+            
         return count_word
     
     def show_related_word(self,count_word):

@@ -268,7 +268,6 @@ class WebCrawler():
         links = []
         sentiment = Counter()
         metadata_json = open(f'./data/web-data/{domain}/metadata.json', encoding='UTF-8')
-        metadata = json.load(metadata_json)
         cnt = Counter()
         with open(f'./data/web-data/{domain}/data.json', encoding='UTF-8') as DATA:
             data = json.load(DATA)
@@ -411,6 +410,7 @@ class TwitterCrawler():
             if use_lan == "en":
                 for tweet in tweets:
                     hashtag = re.findall(hashtag_pattern, tweet.full_text)
+                    cleantext = cleanText(tweet.full_text)
                     self.status = f'Doing Sentiment (EN)'
                     tweet_sen = sentiment(TextBlob(stem(cleanText(tweet.full_text))))
                     text = re.sub(hashtag_pattern,"", tweet.full_text)
